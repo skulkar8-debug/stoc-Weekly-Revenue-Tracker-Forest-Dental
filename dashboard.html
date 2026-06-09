@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekly Revenue Tracker Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --surface: #ffffff;
+      --surface2: #f9fafb;
+      --border: #e5e7eb;
+      --text: #111827;
+      --text-muted: #6b7280;
+      --accent: #1d4ed8;
+      --accent2: #059669;
+      --accent3: #d97706;
+      --accent4: #dc2626;
+      --accent5: #7c3aed;
+      --shadow: 0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.08);
+      --shadow-md: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: #111827;
+      border-bottom: 1px solid #1f2937;
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f9fafb;
+      letter-spacing: -0.01em;
+    }
+
+    .header-left p {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 2px;
+      font-weight: 400;
+    }
+
+    .header-badge {
+      background: #1f2937;
+      color: #93c5fd;
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 4px;
+      letter-spacing: 0.02em;
+      border: 1px solid #374151;
+    }
+
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 28px 32px;
+    }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px 22px;
+      box-shadow: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .kpi-card.blue::after   { background: #1d4ed8; }
+    .kpi-card.green::after  { background: #059669; }
+    .kpi-card.amber::after  { background: #d97706; }
+    .kpi-card.red::after    { background: #dc2626; }
+    .kpi-card.purple::after { background: #7c3aed; }
+
+    .kpi-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .kpi-value {
+      font-size: 1.9rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .kpi-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .kpi-change {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 3px;
+      margin-top: 8px;
+    }
+
+    .kpi-change.up   { background: #ecfdf5; color: #065f46; }
+    .kpi-change.down { background: #fef2f2; color: #991b1b; }
+
+    /* Charts grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .charts-grid.full { grid-template-columns: 1fr; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 24px;
+      box-shadow: none;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .card-subtitle {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+      font-weight: 400;
+    }
+
+    .chart-wrap {
+      position: relative;
+    }
+
+    .chart-wrap canvas { width: 100% !important; }
+
+    /* Tab buttons */
+    .tab-group {
+      display: flex;
+      gap: 2px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 4px 11px;
+      border-radius: 3px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+      transition: all .15s;
+    }
+
+    .tab-btn.active {
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0,0,0,.08);
+    }
+
+    /* Table */
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    th {
+      background: var(--surface2);
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr:hover td { background: var(--surface2); }
+
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    th.num { text-align: right; }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+    .badge-green  { background: #d1fae5; color: #065f46; }
+    .badge-amber  { background: #fef3c7; color: #92400e; }
+    .badge-purple { background: #ede9fe; color: #5b21b6; }
+
+    /* LOI Section */
+    .loi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    .loi-stat {
+      background: var(--surface2);
+      border-radius: 4px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+    }
+
+    .loi-stat-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .loi-stat-value {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.03em;
+    }
+
+    .progress-bar-wrap {
+      margin-top: 16px;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.73rem;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+    }
+
+    .progress-track {
+      height: 8px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+      border-radius: 99px;
+      transition: width .6s ease;
+    }
+
+    /* Color dots */
+    .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+
+    @media (max-width: 1100px) {
+      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+      .charts-grid { grid-template-columns: 1fr; }
+      .loi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 700px) {
+      main { padding: 16px; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      header { padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Weekly Revenue Tracker</h1>
+    <p>Forest Dental · 7 Locations · Data as of June 2026</p>
+  </div>
+  <span class="header-badge">Airtable Live Data</span>
+</header>
+
+<main>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card blue">
+      <div class="kpi-label">TTM Adj. Production</div>
+      <div class="kpi-value">$12.45M</div>
+      <div class="kpi-sub">Trailing 12 Months · May 2026</div>
+      <div class="kpi-change up">▲ +3.75% vs LOI</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">5-Month YoY Growth</div>
+      <div class="kpi-value">+7.2%</div>
+      <div class="kpi-sub">Jan–May 2026 vs Jan–May 2025</div>
+      <div class="kpi-change up">▲ Ahead of prior year</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-label">Avg Days to Collection</div>
+      <div class="kpi-value">34</div>
+      <div class="kpi-sub">TTM Ending May 2026</div>
+      <div class="kpi-sub" style="margin-top:8px">Days to payment</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Avg Encounters / Month</div>
+      <div class="kpi-value">1,420</div>
+      <div class="kpi-sub">TTM Ending May 2026</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">LOI Benchmark</div>
+      <div class="kpi-value">$9.0M</div>
+      <div class="kpi-sub">TTM Sep-25 LOI Target</div>
+      <div class="kpi-change up">▲ $3.45M above LOI</div>
+    </div>
+  </div>
+
+  <!-- Revenue Trend -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Monthly Adjusted Collections</div>
+        <div class="card-subtitle">Jan 2024 – Jun 2026 · All Locations Combined</div>
+      </div>
+      <div class="tab-group">
+        <button class="tab-btn active" onclick="setTrendView('collections', this)">Collections</button>
+        <button class="tab-btn" onclick="setTrendView('charge', this)">Charge Amt</button>
+        <button class="tab-btn" onclick="setTrendView('encounters', this)">Encounters</button>
+        <button class="tab-btn" onclick="setTrendView('procedures', this)">Procedures</button>
+      </div>
+    </div>
+    <div class="chart-wrap" style="height:280px">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+
+  <!-- YoY + Location Charts -->
+  <div class="charts-grid" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Year-over-Year Comparison</div>
+          <div class="card-subtitle">Monthly Adj. Collections by Year</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="yoyChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Revenue by Location</div>
+          <div class="card-subtitle">Total Adj. Collections All-Time</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="locationChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stacked Location Chart -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Monthly Revenue by Location</div>
+        <div class="card-subtitle">Stacked Adj. Collections per location · Jan 2026 – Jun 2026</div>
+      </div>
+    </div>
+    <div class="chart-wrap" style="height:280px">
+      <canvas id="stackedChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Bottom Row: LOI + Table -->
+  <div class="charts-grid" style="margin-bottom:0">
+    <!-- LOI Card -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">LOI Period Production</div>
+          <div class="card-subtitle">TTM Sep-25 LOI · Forest Dental</div>
+        </div>
+        <span class="badge badge-blue">Active</span>
+      </div>
+
+      <div class="loi-grid">
+        <div class="loi-stat">
+          <div class="loi-stat-label">LOI Amount</div>
+          <div class="loi-stat-value">$9,000,000</div>
+        </div>
+        <div class="loi-stat">
+          <div class="loi-stat-label">TTM Actual</div>
+          <div class="loi-stat-value" style="color:#047857">$12,450,000</div>
+        </div>
+        <div class="loi-stat">
+          <div class="loi-stat-label">TTM vs LOI</div>
+          <div class="loi-stat-value" style="color:#1d4ed8">+38.3%</div>
+        </div>
+        <div class="loi-stat">
+          <div class="loi-stat-label">Period Start</div>
+          <div class="loi-stat-value" style="font-size:1rem">Jun 19, 2026</div>
+        </div>
+        <div class="loi-stat">
+          <div class="loi-stat-label">Period End</div>
+          <div class="loi-stat-value" style="font-size:1rem">Jun 24, 2026</div>
+        </div>
+        <div class="loi-stat">
+          <div class="loi-stat-label">Duration</div>
+          <div class="loi-stat-value">5 days</div>
+        </div>
+      </div>
+
+      <div class="progress-bar-wrap">
+        <div class="progress-label">
+          <span>LOI Attainment</span>
+          <span style="font-weight:700; color:#047857">138.3%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:100%"></div>
+        </div>
+        <div style="font-size:0.7rem; color:var(--text-muted); margin-top:6px">TTM Adjusted Production exceeds LOI benchmark by $3.45M</div>
+      </div>
+    </div>
+
+    <!-- KPI Details Table -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">KPI Summary</div>
+          <div class="card-subtitle">TTM Ending May 2026</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>KPI</th>
+              <th class="num">Value</th>
+              <th>Unit</th>
+              <th>Period</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>TTM Adjusted Production</strong></td>
+              <td class="num" style="color:#1d4ed8; font-weight:700">$12,450,000</td>
+              <td><span class="badge badge-blue">USD</span></td>
+              <td>TTM Ending May 2026</td>
+            </tr>
+            <tr>
+              <td><strong>TTM vs LOI % Change</strong></td>
+              <td class="num" style="color:#047857; font-weight:700">+3.75%</td>
+              <td><span class="badge badge-green">Percent</span></td>
+              <td>TTM Ending May 2026</td>
+            </tr>
+            <tr>
+              <td><strong>5-Month YoY Growth</strong></td>
+              <td class="num" style="color:#047857; font-weight:700">+7.2%</td>
+              <td><span class="badge badge-green">Percent</span></td>
+              <td>Jan–May 2026 vs 2025</td>
+            </tr>
+            <tr>
+              <td><strong>Avg Days to Collection</strong></td>
+              <td class="num" style="font-weight:700">34</td>
+              <td><span class="badge badge-amber">Days</span></td>
+              <td>TTM Ending May 2026</td>
+            </tr>
+            <tr>
+              <td><strong>Encounters / Month (Avg)</strong></td>
+              <td class="num" style="font-weight:700">1,420</td>
+              <td><span class="badge badge-purple">Number</span></td>
+              <td>TTM Ending May 2026</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Monthly Performance Table -->
+  <div class="card" style="margin-top:20px">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Monthly Performance Summary</div>
+        <div class="card-subtitle">Jan 2025 – Jun 2026 · All Locations</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th class="num">Adj. Collections</th>
+            <th class="num">Charge Amount</th>
+            <th class="num">Adj. Coll. %</th>
+            <th class="num">Procedures</th>
+            <th class="num">Encounters</th>
+            <th class="num">Procs / Enc</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const monthlyData = [
+  { y:2024, m:'Jan', adj:813901,  charge:873886,  procs:6173,  enc:1860 },
+  { y:2024, m:'Feb', adj:796249,  charge:855516,  procs:5961,  enc:1797 },
+  { y:2024, m:'Mar', adj:747929,  charge:804847,  procs:5732,  enc:1710 },
+  { y:2024, m:'Apr', adj:753915,  charge:810182,  procs:6175,  enc:1871 },
+  { y:2024, m:'May', adj:695711,  charge:750030,  procs:5820,  enc:1830 },
+  { y:2024, m:'Jun', adj:657330,  charge:712624,  procs:5232,  enc:1635 },
+  { y:2024, m:'Jul', adj:676628,  charge:729971,  procs:5694,  enc:1724 },
+  { y:2024, m:'Aug', adj:634529,  charge:681824,  procs:6382,  enc:2021 },
+  { y:2024, m:'Sep', adj:606243,  charge:653572,  procs:6084,  enc:1861 },
+  { y:2024, m:'Oct', adj:664986,  charge:714535,  procs:7227,  enc:2271 },
+  { y:2024, m:'Nov', adj:680475,  charge:734817,  procs:6340,  enc:1942 },
+  { y:2024, m:'Dec', adj:643134,  charge:696653,  procs:6409,  enc:1980 },
+  { y:2025, m:'Jan', adj:856575,  charge:926483,  procs:7257,  enc:2129 },
+  { y:2025, m:'Feb', adj:695817,  charge:754482,  procs:6643,  enc:1944 },
+  { y:2025, m:'Mar', adj:790150,  charge:852142,  procs:7621,  enc:2210 },
+  { y:2025, m:'Apr', adj:794148,  charge:857595,  procs:7309,  enc:2274 },
+  { y:2025, m:'May', adj:729676,  charge:784238,  procs:6964,  enc:2113 },
+  { y:2025, m:'Jun', adj:690699,  charge:743966,  procs:6470,  enc:2008 },
+  { y:2025, m:'Jul', adj:690182,  charge:741967,  procs:7047,  enc:2212 },
+  { y:2025, m:'Aug', adj:634205,  charge:683748,  procs:6692,  enc:1985 },
+  { y:2025, m:'Sep', adj:655365,  charge:700186,  procs:6734,  enc:2031 },
+  { y:2025, m:'Oct', adj:683713,  charge:734838,  procs:7333,  enc:2225 },
+  { y:2025, m:'Nov', adj:628334,  charge:679030,  procs:5995,  enc:1817 },
+  { y:2025, m:'Dec', adj:540892,  charge:580969,  procs:6036,  enc:1850 },
+  { y:2026, m:'Jan', adj:663452,  charge:711428,  procs:6572,  enc:1964 },
+  { y:2026, m:'Feb', adj:660831,  charge:710883,  procs:6658,  enc:2021 },
+  { y:2026, m:'Mar', adj:823463,  charge:884912,  procs:7682,  enc:2256 },
+  { y:2026, m:'Apr', adj:1440751, charge:1549684, procs:13797, enc:3927 },
+  { y:2026, m:'May', adj:1249758, charge:1346159, procs:12240, enc:3714 },
+  { y:2026, m:'Jun', adj:147392,  charge:158365,  procs:1446,  enc:532,  partial:true },
+];
+
+const locationData = [
+  { name:'Toledo',      total:5588211 },
+  { name:'Maumee',      total:5477761 },
+  { name:'Kalamazoo',   total:3029821 },
+  { name:'Northwood',   total:3024620 },
+  { name:'Wickliffe',   total:1806305 },
+  { name:'Parma',       total:1679055 },
+  { name:'Rocky River', total:1140659 },
+];
+
+const loc2026 = {
+  labels: ['Jan','Feb','Mar','Apr','May','Jun'],
+  Toledo:      [198156, 199963, 209924, 392375, 322875,      0],
+  Maumee:      [158512, 166491, 204190, 356933, 351694,  43630],
+  Kalamazoo:   [111685, 101544, 138936, 202512, 194752,  43080],
+  Northwood:   [ 99408,  90343,  98193, 246648, 172583,      0],
+  Wickliffe:   [ 61798,  46872,  68737, 129100,  99059,  20728],
+  Parma:       [ 14713,  28010,  60132,  58964,  78740,   8942],
+  'Rocky River':[ 19180, 27607,  43352,  54218,  30056,  31012],
+};
+
+// ============================================================
+// CHARTS
+// ============================================================
+Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.font.weight = '500';
+
+const PALETTE = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316'];
+
+// --- Trend Chart ---
+let trendChart;
+let currentTrendView = 'collections';
+
+const trendLabels = monthlyData.map(d => `${d.m} ${d.y}`);
+
+function buildTrendData(view) {
+  const map = { collections:'adj', charge:'charge', encounters:'enc', procedures:'procs' };
+  const key = map[view];
+  return monthlyData.map(d => d[key]);
+}
+
+function initTrendChart() {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+  gradient.addColorStop(0, 'rgba(59,130,246,0.25)');
+  gradient.addColorStop(1, 'rgba(59,130,246,0)');
+
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: trendLabels,
+      datasets: [{
+        label: 'Adj. Collections',
+        data: buildTrendData('collections'),
+        borderColor: '#3b82f6',
+        backgroundColor: gradient,
+        borderWidth: 2,
+        fill: true,
+        tension: 0.35,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        pointBackgroundColor: '#3b82f6',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.raw;
+              if (currentTrendView === 'collections' || currentTrendView === 'charge')
+                return ` $${val.toLocaleString()}`;
+              return ` ${val.toLocaleString()}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: '#718096',
+            maxRotation: 45,
+            autoSkip: true,
+            maxTicksLimit: 18,
+          }
+        },
+        y: {
+          grid: { color: '#f0f4f8' },
+          ticks: {
+            color: '#718096',
+            callback: (v) => {
+              if (currentTrendView === 'collections' || currentTrendView === 'charge')
+                return '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K');
+              return v.toLocaleString();
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function setTrendView(view, btn) {
+  currentTrendView = view;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const labels = { collections:'Adj. Collections', charge:'Charge Amount', encounters:'Encounters', procedures:'Procedures' };
+  trendChart.data.datasets[0].label = labels[view];
+  trendChart.data.datasets[0].data = buildTrendData(view);
+  trendChart.update();
+}
+
+// --- YoY Chart ---
+function initYoYChart() {
+  const ctx = document.getElementById('yoyChart').getContext('2d');
+
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const y24 = monthlyData.filter(d=>d.y===2024).map(d=>d.adj);
+  const y25 = monthlyData.filter(d=>d.y===2025).map(d=>d.adj);
+  const y26 = monthlyData.filter(d=>d.y===2026).map(d=>d.adj);
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [
+        { label:'2024', data:y24, backgroundColor:'rgba(148,163,184,0.6)', borderColor:'#94a3b8', borderWidth:1, borderRadius:3 },
+        { label:'2025', data:y25, backgroundColor:'rgba(59,130,246,0.5)',  borderColor:'#3b82f6',  borderWidth:1, borderRadius:3 },
+        { label:'2026', data:y26, backgroundColor:'rgba(16,185,129,0.6)', borderColor:'#10b981', borderWidth:1, borderRadius:3 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${ctx.dataset.label}: $${ctx.raw.toLocaleString()}`
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color:'#718096' } },
+        y: {
+          grid: { color:'#f0f4f8' },
+          ticks: {
+            color:'#718096',
+            callback: v => '$' + (v>=1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K')
+          }
+        }
+      }
+    }
+  });
+}
+
+// --- Location Chart ---
+function initLocationChart() {
+  const ctx = document.getElementById('locationChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: locationData.map(d=>d.name),
+      datasets: [{
+        data: locationData.map(d=>d.total),
+        backgroundColor: PALETTE,
+        borderColor: '#ffffff',
+        borderWidth: 3,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            boxWidth: 12,
+            padding: 10,
+            generateLabels(chart) {
+              const ds = chart.data.datasets[0];
+              const total = ds.data.reduce((a,b)=>a+b,0);
+              return chart.data.labels.map((label,i) => ({
+                text: `${label}  ${((ds.data[i]/total)*100).toFixed(1)}%`,
+                fillStyle: PALETTE[i],
+                strokeStyle: '#fff',
+                lineWidth: 1,
+                index: i
+              }));
+            }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` $${ctx.raw.toLocaleString()}`
+          }
+        }
+      },
+      cutout: '62%',
+    }
+  });
+}
+
+// --- Stacked Location Chart ---
+function initStackedChart() {
+  const ctx = document.getElementById('stackedChart').getContext('2d');
+  const locs = Object.keys(loc2026).filter(k=>k!=='labels');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: loc2026.labels,
+      datasets: locs.map((loc,i) => ({
+        label: loc,
+        data: loc2026[loc],
+        backgroundColor: PALETTE[i],
+        borderRadius: i === locs.length-1 ? { topLeft:4, topRight:4 } : 0,
+        stack: 'stack',
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { position:'top', labels:{ boxWidth:12, padding:16 } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${ctx.dataset.label}: $${ctx.raw.toLocaleString()}`
+          }
+        }
+      },
+      scales: {
+        x: { stacked:true, grid:{display:false}, ticks:{color:'#718096'} },
+        y: {
+          stacked:true,
+          grid:{color:'#f0f4f8'},
+          ticks:{
+            color:'#718096',
+            callback: v => '$'+(v>=1e6?(v/1e6).toFixed(1)+'M':(v/1e3).toFixed(0)+'K')
+          }
+        }
+      }
+    }
+  });
+}
+
+// --- Monthly Table ---
+function buildTable() {
+  const tbody = document.getElementById('monthlyTableBody');
+  const recent = monthlyData.filter(d => d.y >= 2025).reverse();
+
+  recent.forEach(d => {
+    const pct = ((d.adj / d.charge) * 100).toFixed(1);
+    const ppo = (d.procs / d.enc).toFixed(1);
+    const label = `${d.m} ${d.y}`;
+    const isPartial = d.partial;
+
+    tbody.innerHTML += `
+      <tr>
+        <td>
+          <strong>${label}</strong>
+          ${isPartial ? '<span class="badge badge-amber" style="margin-left:6px">Partial</span>' : ''}
+        </td>
+        <td class="num" style="font-weight:600; color:#1d4ed8">$${Math.round(d.adj).toLocaleString()}</td>
+        <td class="num">$${Math.round(d.charge).toLocaleString()}</td>
+        <td class="num">${pct}%</td>
+        <td class="num">${d.procs.toLocaleString()}</td>
+        <td class="num">${d.enc.toLocaleString()}</td>
+        <td class="num">${ppo}</td>
+      </tr>
+    `;
+  });
+}
+
+// Init
+initTrendChart();
+initYoYChart();
+initLocationChart();
+initStackedChart();
+buildTable();
+</script>
+</body>
+</html>
