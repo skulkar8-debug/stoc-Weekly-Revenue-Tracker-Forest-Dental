@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -190,6 +191,112 @@
     }
 
     .chart-wrap canvas { width: 100% !important; }
+
+    /* Location dropdown */
+    .loc-filter-wrap {
+      position: relative;
+    }
+
+    .loc-filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      cursor: pointer;
+      white-space: nowrap;
+      min-width: 140px;
+      justify-content: space-between;
+    }
+
+    .loc-filter-btn:hover { background: var(--surface2); }
+
+    .loc-filter-btn .chevron {
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      transition: transform .15s;
+    }
+
+    .loc-filter-btn.open .chevron { transform: rotate(180deg); }
+
+    .loc-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.1);
+      z-index: 200;
+      min-width: 180px;
+      padding: 6px 0;
+    }
+
+    .loc-dropdown.open { display: block; }
+
+    .loc-dropdown-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 12px 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+
+    .loc-dropdown-header span {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .loc-toggle-all {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      padding: 0;
+    }
+
+    .loc-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      color: var(--text);
+      transition: background .1s;
+      user-select: none;
+    }
+
+    .loc-option:hover { background: var(--surface2); }
+
+    .loc-option input[type=checkbox] {
+      accent-color: var(--accent);
+      width: 13px;
+      height: 13px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .loc-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
 
     /* Tab buttons */
     .tab-group {
@@ -400,13 +507,57 @@
     <div class="card-header">
       <div>
         <div class="card-title">Monthly Adjusted Collections</div>
-        <div class="card-subtitle">Jan 2024 – Jun 2026 · All Locations Combined</div>
+        <div class="card-subtitle" id="trendSubtitle">Jan 2024 – Jun 2026 · All Locations Combined</div>
       </div>
-      <div class="tab-group">
-        <button class="tab-btn active" onclick="setTrendView('collections', this)">Collections</button>
-        <button class="tab-btn" onclick="setTrendView('charge', this)">Charge Amt</button>
-        <button class="tab-btn" onclick="setTrendView('encounters', this)">Encounters</button>
-        <button class="tab-btn" onclick="setTrendView('procedures', this)">Procedures</button>
+      <div style="display:flex;gap:10px;align-items:center">
+        <!-- Location filter -->
+        <div class="loc-filter-wrap" id="locFilterWrap">
+          <button class="loc-filter-btn" id="locFilterBtn" onclick="toggleLocDropdown()">
+            <span id="locFilterLabel">All Locations</span>
+            <span class="chevron">▼</span>
+          </button>
+          <div class="loc-dropdown" id="locDropdown">
+            <div class="loc-dropdown-header">
+              <span>Locations</span>
+              <button class="loc-toggle-all" id="toggleAllBtn" onclick="toggleAllLocations()">Deselect All</button>
+            </div>
+            <label class="loc-option" onclick="toggleLoc('Toledo')">
+              <input type="checkbox" id="chk-Toledo" checked />
+              <span class="loc-dot" style="background:#3b82f6"></span>Toledo
+            </label>
+            <label class="loc-option" onclick="toggleLoc('Maumee')">
+              <input type="checkbox" id="chk-Maumee" checked />
+              <span class="loc-dot" style="background:#10b981"></span>Maumee
+            </label>
+            <label class="loc-option" onclick="toggleLoc('Kalamazoo')">
+              <input type="checkbox" id="chk-Kalamazoo" checked />
+              <span class="loc-dot" style="background:#f59e0b"></span>Kalamazoo
+            </label>
+            <label class="loc-option" onclick="toggleLoc('Northwood')">
+              <input type="checkbox" id="chk-Northwood" checked />
+              <span class="loc-dot" style="background:#ef4444"></span>Northwood
+            </label>
+            <label class="loc-option" onclick="toggleLoc('Wickliffe')">
+              <input type="checkbox" id="chk-Wickliffe" checked />
+              <span class="loc-dot" style="background:#8b5cf6"></span>Wickliffe
+            </label>
+            <label class="loc-option" onclick="toggleLoc('Parma')">
+              <input type="checkbox" id="chk-Parma" checked />
+              <span class="loc-dot" style="background:#06b6d4"></span>Parma
+            </label>
+            <label class="loc-option" onclick="toggleLoc('Rocky River')">
+              <input type="checkbox" id="chk-Rocky River" checked />
+              <span class="loc-dot" style="background:#f97316"></span>Rocky River
+            </label>
+          </div>
+        </div>
+        <!-- Metric tabs -->
+        <div class="tab-group">
+          <button class="tab-btn active" onclick="setTrendView('collections', this)">Collections</button>
+          <button class="tab-btn" onclick="setTrendView('charge', this)">Charge Amt</button>
+          <button class="tab-btn" onclick="setTrendView('encounters', this)">Encounters</button>
+          <button class="tab-btn" onclick="setTrendView('procedures', this)">Procedures</button>
+        </div>
       </div>
     </div>
     <div class="chart-wrap" style="height:280px">
@@ -594,6 +745,21 @@
 // ============================================================
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+const TREND_LABELS = ['Jan 2024','Feb 2024','Mar 2024','Apr 2024','May 2024','Jun 2024','Jul 2024','Aug 2024','Sep 2024','Oct 2024','Nov 2024','Dec 2024','Jan 2025','Feb 2025','Mar 2025','Apr 2025','May 2025','Jun 2025','Jul 2025','Aug 2025','Sep 2025','Oct 2025','Nov 2025','Dec 2025','Jan 2026','Feb 2026','Mar 2026','Apr 2026','May 2026','Jun 2026'];
+
+const locMonthlyAdj = {
+  'Toledo':      [209367,220129,166056,208324,192224,161136,202787,172498,155168,181362,141290,177488,176523,185975,204238,198410,168485,152940,163131,189936,180811,160599,138392,157651,198156,199963,209924,392375,322875,0],
+  'Maumee':      [140087,158726,184681,182381,186003,215836,189474,141220,156270,154605,191258,172597,241009,201738,201987,237842,169469,171032,177965,147354,106649,173929,165089,129111,158512,166491,204190,356933,351694,43630],
+  'Kalamazoo':   [84883,101912,104253,107227,80038,74571,78563,89088,80915,85314,88648,58737,99431,70055,100118,120556,113303,113700,126613,68105,111493,109439,84612,85737,111685,101544,138936,202512,194752,43080],
+  'Northwood':   [145108,111082,97499,82239,111600,63287,78488,80935,62535,81166,85790,83981,119155,109261,123996,122728,124005,115282,87738,101424,88485,92967,68750,79946,99408,90343,98193,246648,172583,0],
+  'Wickliffe':   [77722,54577,73232,71158,60228,55529,61777,60649,48919,72951,75798,42673,73132,25773,65970,48275,49360,44090,48463,53821,59991,72089,43055,40775,61798,46872,68737,129100,99059,20728],
+  'Parma':       [98368,109352,84680,76548,55832,53871,47110,46313,66720,60485,38762,51556,87698,70963,42869,43352,82498,39235,52852,23664,62503,39160,65775,29389,14713,28010,60132,58964,78740,8942],
+  'Rocky River': [58366,40471,37528,26038,9785,33100,18429,43826,35716,29103,58929,56102,59627,32052,50973,22985,22556,54420,33419,49902,45433,35530,62661,18282,19180,27607,43352,54218,30056,31012],
+};
+
+const ALL_LOCS = ['Toledo','Maumee','Kalamazoo','Northwood','Wickliffe','Parma','Rocky River'];
+let selectedLocs = new Set(ALL_LOCS);
+
 const monthlyData = [
   { y:2024, m:'Jan', adj:813901,  charge:873886,  procs:6173,  enc:1860 },
   { y:2024, m:'Feb', adj:796249,  charge:855516,  procs:5961,  enc:1797 },
@@ -661,11 +827,16 @@ const PALETTE = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f
 let trendChart;
 let currentTrendView = 'collections';
 
-const trendLabels = monthlyData.map(d => `${d.m} ${d.y}`);
-
-function buildTrendData(view) {
-  const map = { collections:'adj', charge:'charge', encounters:'enc', procedures:'procs' };
-  const key = map[view];
+function computeTrendData() {
+  // For collections (adj), sum selected locations per month
+  if (currentTrendView === 'collections') {
+    return TREND_LABELS.map((_, i) => {
+      return [...selectedLocs].reduce((sum, loc) => sum + (locMonthlyAdj[loc]?.[i] || 0), 0);
+    });
+  }
+  // For other views, use aggregate monthlyData (not filterable by location in source)
+  const map = { charge:'charge', encounters:'enc', procedures:'procs' };
+  const key = map[currentTrendView];
   return monthlyData.map(d => d[key]);
 }
 
@@ -673,16 +844,16 @@ function initTrendChart() {
   const ctx = document.getElementById('trendChart').getContext('2d');
 
   const gradient = ctx.createLinearGradient(0, 0, 0, 280);
-  gradient.addColorStop(0, 'rgba(59,130,246,0.25)');
+  gradient.addColorStop(0, 'rgba(59,130,246,0.22)');
   gradient.addColorStop(1, 'rgba(59,130,246,0)');
 
   trendChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: trendLabels,
+      labels: TREND_LABELS,
       datasets: [{
         label: 'Adj. Collections',
-        data: buildTrendData('collections'),
+        data: computeTrendData(),
         borderColor: '#3b82f6',
         backgroundColor: gradient,
         borderWidth: 2,
@@ -713,15 +884,10 @@ function initTrendChart() {
       scales: {
         x: {
           grid: { display: false },
-          ticks: {
-            color: '#718096',
-            maxRotation: 45,
-            autoSkip: true,
-            maxTicksLimit: 18,
-          }
+          ticks: { color:'#718096', maxRotation:45, autoSkip:true, maxTicksLimit:18 }
         },
         y: {
-          grid: { color: '#f0f4f8' },
+          grid: { color: '#f3f4f6' },
           ticks: {
             color: '#718096',
             callback: (v) => {
@@ -742,7 +908,70 @@ function setTrendView(view, btn) {
   btn.classList.add('active');
   const labels = { collections:'Adj. Collections', charge:'Charge Amount', encounters:'Encounters', procedures:'Procedures' };
   trendChart.data.datasets[0].label = labels[view];
-  trendChart.data.datasets[0].data = buildTrendData(view);
+  trendChart.data.datasets[0].data = computeTrendData();
+  trendChart.update();
+}
+
+// --- Location dropdown ---
+function toggleLocDropdown() {
+  const btn = document.getElementById('locFilterBtn');
+  const dd = document.getElementById('locDropdown');
+  btn.classList.toggle('open');
+  dd.classList.toggle('open');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (!document.getElementById('locFilterWrap').contains(e.target)) {
+    document.getElementById('locFilterBtn').classList.remove('open');
+    document.getElementById('locDropdown').classList.remove('open');
+  }
+});
+
+function toggleLoc(loc) {
+  // Prevent checkbox default — we handle it here
+  const chk = document.getElementById('chk-' + loc);
+  // The label onclick fires before checkbox change, so toggle manually
+  setTimeout(() => {
+    if (chk.checked) selectedLocs.add(loc);
+    else selectedLocs.delete(loc);
+    updateTrendFromFilter();
+  }, 0);
+}
+
+function toggleAllLocations() {
+  const allSelected = selectedLocs.size === ALL_LOCS.length;
+  if (allSelected) {
+    selectedLocs.clear();
+    ALL_LOCS.forEach(loc => { document.getElementById('chk-' + loc).checked = false; });
+    document.getElementById('toggleAllBtn').textContent = 'Select All';
+  } else {
+    ALL_LOCS.forEach(loc => {
+      selectedLocs.add(loc);
+      document.getElementById('chk-' + loc).checked = true;
+    });
+    document.getElementById('toggleAllBtn').textContent = 'Deselect All';
+  }
+  updateTrendFromFilter();
+}
+
+function updateTrendFromFilter() {
+  // Update button label
+  const n = selectedLocs.size;
+  const label = n === 0 ? 'None selected' : n === ALL_LOCS.length ? 'All Locations' : `${n} Location${n > 1 ? 's' : ''}`;
+  document.getElementById('locFilterLabel').textContent = label;
+
+  // Update subtitle
+  const sub = n === ALL_LOCS.length ? 'Jan 2024 – Jun 2026 · All Locations Combined'
+    : n === 0 ? 'Jan 2024 – Jun 2026 · No locations selected'
+    : 'Jan 2024 – Jun 2026 · ' + [...selectedLocs].join(', ');
+  document.getElementById('trendSubtitle').textContent = sub;
+
+  // Update toggle all button text
+  document.getElementById('toggleAllBtn').textContent = n === ALL_LOCS.length ? 'Deselect All' : 'Select All';
+
+  // Recompute and update chart
+  trendChart.data.datasets[0].data = computeTrendData();
   trendChart.update();
 }
 
