@@ -5,7 +5,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SP USA | Dental Practice Dashboard</title>
-<!-- System fonts only — no Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
@@ -45,7 +47,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -357,7 +359,7 @@ input[type="date"]:focus { outline: none; border-color: var(--navy); }
 }
 .kpi-value {
   font-size: 24px; font-weight: 700; color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-variant-numeric: tabular-nums; letter-spacing: -0.4px; line-height: 1.1;
   margin-bottom: 4px;
 }
@@ -386,12 +388,12 @@ input[type="date"]:focus { outline: none; border-color: var(--navy); }
 }
 .cmp-value {
   font-size: 26px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.1;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 .cmp-value.unset {
   font-size: 12px; font-weight: 500; letter-spacing: 0; line-height: 1.5;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   color: var(--text3) !important;
 }
 .cmp-sub { font-size: 11px; color: var(--text2); margin-top: 5px; }
@@ -429,7 +431,7 @@ table.dt th {
   border-bottom: 1.5px solid var(--border);
   background: var(--surface2); white-space: nowrap;
 }
-table.dt th.l, table.dt td.l { text-align: left; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+table.dt th.l, table.dt td.l { text-align: left; font-family: 'Inter', -apple-system, sans-serif; }
 table.dt td {
   padding: 9px 16px; text-align: right;
   border-bottom: 1px solid var(--border);
@@ -449,7 +451,7 @@ table.dt td.neg   { color: var(--red);   font-weight: 600; }
 .yoy-badge {
   display: inline-flex; align-items: center; gap: 3px;
   padding: 2px 8px; border-radius: 3px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-weight: 700; font-size: 11px; white-space: nowrap;
 }
 .yoy-badge.pos { background: var(--green-lt); color: var(--green); }
@@ -458,18 +460,18 @@ table.dt td.neg   { color: var(--red);   font-weight: 600; }
   display: inline-flex; align-items: center; gap: 3px;
   padding: 1px 5px; border-radius: 3px;
   background: var(--amber-lt); color: var(--amber);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 9px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.4px; vertical-align: middle; margin-left: 4px;
 }
 
 /* ── DEAL SUMMARY TABLE ───────────────────────────────────── */
 .deal-sum-tbl td.deal-name {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-weight: 600; font-size: 12.5px;
 }
 .deal-sum-tbl td.period-lbl {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 11px; color: var(--text2);
 }
 
@@ -935,17 +937,17 @@ table.dt td.neg   { color: var(--red);   font-weight: 600; }
     <div class="tbl-card">
       <div class="tbl-head">
         <div>
-          <div class="tbl-head-title" id="locDetailTitle">Select a location</div>
-          <div class="tbl-head-sub" style="font-size:11px;color:var(--text3)">Monthly revenue (net adj. collections) and avg ticket price per fiscal year</div>
+          <div class="tbl-head-title" id="locDetailTitle">Select a deal</div>
+          <div class="tbl-head-sub" style="font-size:11px;color:var(--text3)">All locations · monthly net adj. collections and avg ticket price by fiscal year</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <select id="locDetailSelect" class="filter-sel" style="min-width:200px" onchange="renderLocDetail()">
-            <option value="">— pick a location —</option>
+            <option value="">— pick a deal —</option>
           </select>
         </div>
       </div>
       <div id="locDetailBody" style="overflow-x:auto">
-        <div style="text-align:center;color:var(--text3);padding:28px;font-size:12px">Choose a location from the dropdown above</div>
+        <div style="text-align:center;color:var(--text3);padding:28px;font-size:12px">Choose a deal from the dropdown above</div>
       </div>
     </div>
   </div><!-- /tab-table -->
@@ -1466,9 +1468,6 @@ async function fetchSummaryLOI() {
       for (const deal of DEALS) {
         const d = deal.name.toLowerCase().replace(/[^a-z0-9]/g, '');
         if (clean === d || clean.includes(d) || d.includes(clean)) return deal.name;
-        // word-level: any word in deal name in rawName
-        const words = deal.name.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-        if (words.some(w => clean.includes(w.replace(/[^a-z0-9]/g,'')))) return deal.name;
       }
       return null;
     }
@@ -1580,7 +1579,7 @@ function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete chart
 /* Chart.js global defaults for light theme */
 Chart.defaults.color = '#6B7280';
 Chart.defaults.borderColor = '#E5E7EB';
-Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+Chart.defaults.font.family = "'Inter', -apple-system, sans-serif";
 Chart.defaults.font.size = 11;
 
 const TOOLTIP = {
@@ -2184,8 +2183,8 @@ function renderLocationBreakdown() {
       : '<span style="color:var(--text3)">—</span>';
 
     return `<tr>
-      <td class="l" style="font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${loc.location}</td>
-      <td class="l" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:11px;color:var(--text2)">${loc.deal}</td>
+      <td class="l" style="font-weight:600;font-family:'Inter',-apple-system,sans-serif">${loc.location}</td>
+      <td class="l" style="font-family:'Inter',-apple-system,sans-serif;font-size:11px;color:var(--text2)">${loc.deal}</td>
       <td style="font-weight:600">${fmtM(loc.adjCollections, true)}</td>
       <td>${fmtM(loc.chargeAmount, true)}</td>
       <td>${loc.collRate != null ? fmtPct(loc.collRate) : '—'}</td>
@@ -2196,14 +2195,14 @@ function renderLocationBreakdown() {
     </tr>`;
   }).join('');
 
-  /* Populate the location detail selector with all locations in current filter */
+  /* Populate the location detail selector with deals that have multi-location data */
   const sel = document.getElementById('locDetailSelect');
   if (sel) {
-    const allLocs = locs.map(l => ({ key: `${l.deal}__${l.location}`, label: `${l.location} (${l.deal})` }));
+    const dealSet = [...new Set(locs.map(l => l.deal))].sort();
     const prev = sel.value;
-    sel.innerHTML = '<option value="">— pick a location —</option>' +
-      allLocs.map(o => `<option value="${o.key}"${o.key===prev?' selected':''}>${o.label}</option>`).join('');
-    if (prev && allLocs.some(o => o.key === prev)) renderLocDetail();
+    sel.innerHTML = '<option value="">— pick a deal —</option>' +
+      dealSet.map(d => `<option value="${d}"${d===prev?' selected':''}>${d}</option>`).join('');
+    if (prev && dealSet.includes(prev)) renderLocDetail();
   }
 }
 
@@ -2216,110 +2215,117 @@ function renderLocDetail() {
   const title = document.getElementById('locDetailTitle');
   if (!sel || !container) return;
 
-  const val = sel.value;
-  if (!val) {
-    container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:28px;font-size:12px">Choose a location from the dropdown above</div>';
-    if (title) title.textContent = 'Select a location';
+  const deal = sel.value;
+  if (!deal) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:28px;font-size:12px">Choose a deal from the dropdown above</div>';
+    if (title) title.textContent = 'Select a deal';
     return;
   }
+  if (title) title.textContent = deal;
 
-  const [deal, location] = val.split('__');
-  if (title) title.textContent = `${location} · ${deal}`;
-
-  /* Build data: rows per (year, monthNum) */
-  const rows = allData.filter(r =>
-    r.deal === deal &&
-    (r.location || '(unspecified)') === location &&
-    r.year && r.monthNum
-  );
-
+  /* All rows for this deal that have month/year */
+  const rows = allData.filter(r => r.deal === deal && r.year && r.monthNum);
   if (!rows.length) {
-    container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:28px;font-size:12px">No data for this location</div>';
+    container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:28px;font-size:12px">No monthly data for this deal</div>';
     return;
   }
 
-  /* Aggregate into map[year][monthNum] */
-  const byYM = {};
+  /* Get sorted locations and all years across all locations */
+  const locSet = [...new Set(rows.map(r => r.location || '(unspecified)'))].sort();
+  const allYears = [...new Set(rows.map(r => r.year))].sort();
+
+  /* Build per-location data: byLoc[loc][year][month] = {adj, enc} */
+  const byLoc = {};
   rows.forEach(r => {
+    const loc = r.location || '(unspecified)';
     const y = r.year, m = r.monthNum;
-    if (!byYM[y]) byYM[y] = {};
-    if (!byYM[y][m]) byYM[y][m] = { adj: 0, enc: 0, charges: 0 };
-    byYM[y][m].adj     += r.adjCollections;
-    byYM[y][m].enc     += r.encounters;
-    byYM[y][m].charges += r.chargeAmount;
+    if (!byLoc[loc]) byLoc[loc] = {};
+    if (!byLoc[loc][y]) byLoc[loc][y] = {};
+    if (!byLoc[loc][y][m]) byLoc[loc][y][m] = { adj: 0, enc: 0 };
+    byLoc[loc][y][m].adj += r.adjCollections;
+    byLoc[loc][y][m].enc += r.encounters;
   });
 
-  const years = Object.keys(byYM).map(Number).sort();
+  /* For each loc, determine which years have any data */
+  function locYears(loc) {
+    return allYears.filter(y => byLoc[loc]?.[y] && Object.keys(byLoc[loc][y]).length > 0);
+  }
 
-  /* Year totals */
-  const yearTotals = {};
-  years.forEach(y => {
-    yearTotals[y] = { adj: 0, enc: 0, charges: 0 };
-    Object.values(byYM[y]).forEach(v => {
-      yearTotals[y].adj     += v.adj;
-      yearTotals[y].enc     += v.enc;
-      yearTotals[y].charges += v.charges;
-    });
-  });
+  /* Build one combined table per metric (Revenue and Avg Ticket) */
+  const buildCombinedTable = (metricLabel, cellFn, totalFn) => {
+    /* header row 1: location name spanning its year columns */
+    const locHeaders = locSet.map(loc => {
+      const yrs = locYears(loc);
+      return `<th colspan="${yrs.length}" style="text-align:center;padding:6px 10px;font-size:11px;font-weight:700;color:var(--navy);background:var(--surface2);border-left:3px solid var(--border2);white-space:nowrap">${loc}</th>`;
+    }).join('');
 
-  const colW = '110px';
-  const thStyle = `style="text-align:right;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text3);white-space:nowrap;min-width:${colW}"`;
-  const tdNum   = (v) => v > 0 ? `$${numFmt(Math.round(v))}` : '–';
-  const tdTick  = (adj, enc) => (enc > 0 ? `$${numFmt(Math.round(adj/enc))}` : '–');
+    /* header row 2: year sub-headers */
+    const yearHeaders = locSet.map(loc => {
+      const yrs = locYears(loc);
+      return yrs.map((y, i) => `<th style="text-align:right;padding:5px 8px;font-size:10px;font-weight:700;color:var(--text3);background:var(--surface2);white-space:nowrap${i===0?';border-left:3px solid var(--border2)':''}">FY${String(y).slice(2)}</th>`).join('');
+    }).join('');
 
-  /* Build two sub-tables side by side or stacked:
-     Table 1: Revenue, Net Adj. Collections
-     Table 2: Avg Ticket Price (adj / encounters) */
-
-  const buildTable = (label, cellFn, totalFn) => {
-    let h = `<table style="border-collapse:collapse;width:100%;font-size:12px;min-width:${120 + years.length*120}px">`;
-    h += `<thead><tr>
-      <th colspan="${years.length+1}" style="text-align:center;padding:8px 12px;font-size:12px;font-weight:700;background:var(--surface2);border-bottom:2px solid var(--border2)">${label}</th>
-    </tr><tr>
-      <th style="text-align:left;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text3);min-width:110px">Month</th>
-      ${years.map(y => `<th ${thStyle.replace('style="','style="background:var(--surface2);').slice(0,-1)}">FY${String(y).slice(2)} (${y})</th>`).join('')}
-    </tr></thead><tbody>`;
+    let h = `<table style="border-collapse:collapse;font-size:12px;white-space:nowrap">`;
+    h += `<thead>`;
+    /* metric label spanning everything */
+    const totalCols = locSet.reduce((s, loc) => s + locYears(loc).length, 0);
+    h += `<tr><th colspan="${totalCols + 1}" style="text-align:left;padding:8px 12px;font-size:12px;font-weight:700;background:var(--navy);color:#fff">${metricLabel}</th></tr>`;
+    h += `<tr><th style="text-align:left;padding:5px 10px;font-size:11px;color:var(--text3);background:var(--surface2);min-width:90px">Month</th>${locHeaders}</tr>`;
+    h += `<tr><th style="background:var(--surface2)"></th>${yearHeaders}</tr>`;
+    h += `</thead><tbody>`;
 
     for (let mo = 1; mo <= 12; mo++) {
-      const hasAny = years.some(y => byYM[y]?.[mo]);
-      const rowStyle = hasAny ? '' : ' style="color:var(--text4)"';
-      h += `<tr${rowStyle}>
-        <td style="padding:4px 12px;font-size:12px;color:var(--text2)">${MO_FULL_LIST[mo-1]}</td>
-        ${years.map(y => {
-          const v = byYM[y]?.[mo];
-          const val = v ? cellFn(v) : '–';
-          return `<td style="text-align:right;padding:4px 12px;font-variant-numeric:tabular-nums">${val}</td>`;
-        }).join('')}
-      </tr>`;
+      const hasAny = locSet.some(loc => locYears(loc).some(y => byLoc[loc]?.[y]?.[mo]));
+      const rowBg = mo % 2 === 0 ? 'background:var(--surface2)' : '';
+      h += `<tr style="${rowBg}">`;
+      h += `<td style="padding:3px 10px;font-size:12px;color:var(--text2);font-weight:500">${MO_FULL_LIST[mo-1]}</td>`;
+      locSet.forEach((loc, li) => {
+        const yrs = locYears(loc);
+        yrs.forEach((y, yi) => {
+          const v = byLoc[loc]?.[y]?.[mo];
+          const txt = v ? cellFn(v) : '<span style="color:var(--text4)">–</span>';
+          const borderLeft = yi === 0 ? 'border-left:3px solid var(--border2);' : '';
+          h += `<td style="${borderLeft}text-align:right;padding:3px 8px;font-variant-numeric:tabular-nums">${txt}</td>`;
+        });
+      });
+      h += `</tr>`;
     }
 
     /* Totals row */
-    h += `<tr style="background:var(--surface2);border-top:2px solid var(--border2);font-weight:700">
-      <td style="padding:7px 12px;font-size:12px">Totals</td>
-      ${years.map(y => `<td style="text-align:right;padding:7px 12px;font-variant-numeric:tabular-nums">${totalFn(yearTotals[y])}</td>`).join('')}
-    </tr>`;
-
-    h += '</tbody></table>';
+    h += `<tr style="background:var(--surface2);border-top:2px solid var(--border2);font-weight:700">`;
+    h += `<td style="padding:6px 10px;font-size:12px">Totals</td>`;
+    locSet.forEach((loc, li) => {
+      const yrs = locYears(loc);
+      yrs.forEach((y, yi) => {
+        const tot = { adj: 0, enc: 0 };
+        for (let m = 1; m <= 12; m++) {
+          const v = byLoc[loc]?.[y]?.[m];
+          if (v) { tot.adj += v.adj; tot.enc += v.enc; }
+        }
+        const txt = totalFn(tot);
+        const borderLeft = yi === 0 ? 'border-left:3px solid var(--border2);' : '';
+        h += `<td style="${borderLeft}text-align:right;padding:6px 8px;font-variant-numeric:tabular-nums">${txt}</td>`;
+      });
+    });
+    h += `</tr></tbody></table>`;
     return h;
   };
 
-  const revenueTable = buildTable(
+  const revTable  = buildCombinedTable(
     'Revenue, Net Adj. Collections ($)',
     v => `$${numFmt(Math.round(v.adj))}`,
-    t => `$${numFmt(Math.round(t.adj))}`
+    t => t.adj > 0 ? `$${numFmt(Math.round(t.adj))}` : '–'
   );
-
-  const ticketTable = buildTable(
+  const tickTable = buildCombinedTable(
     'Avg Ticket Price (Adj. Collections ÷ Encounters)',
-    v => tdTick(v.adj, v.enc),
-    t => tdTick(t.adj, t.enc)
+    v => v.enc > 0 ? `$${numFmt(Math.round(v.adj / v.enc))}` : '–',
+    t => t.enc > 0 ? `$${numFmt(Math.round(t.adj / t.enc))}` : '–'
   );
 
-  container.innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:24px;padding-bottom:8px">
-      <div style="overflow-x:auto">${revenueTable}</div>
-      <div style="overflow-x:auto">${ticketTable}</div>
-    </div>`;
+  container.innerHTML = `<div style="display:flex;flex-direction:column;gap:24px;padding-bottom:8px">
+    <div style="overflow-x:auto">${revTable}</div>
+    <div style="overflow-x:auto">${tickTable}</div>
+  </div>`;
 }
 
 function renderDealSummary() {
