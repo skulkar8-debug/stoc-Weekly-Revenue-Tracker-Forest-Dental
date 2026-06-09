@@ -1630,28 +1630,59 @@ function renderTTMTrend(canvasId, rolling, loiTotal) {
 
 function renderMainChart(data) {
   destroyChart('main');
-  const d = data.slice(-30);
+  // Exclude current partial month from trend — it distorts the scale
+  const full = data.filter(x => !isCurrentMonthKey(x.key));
+  const partial = data.find(x => isCurrentMonthKey(x.key));
+  const d = full.slice(-18);
   if (!d.length) return;
+
+  // If partial month exists, show it as a faded bar appended
+  const allD  = partial ? [...d, partial] : d;
+  const bgColors = allD.map((x, i) =>
+    (partial && i === allD.length - 1) ? 'rgba(27,110,69,0.28)' : 'rgba(27,110,69,0.75)'
+  );
+  const bdColors = allD.map((x, i) =>
+    (partial && i === allD.length - 1) ? 'rgba(27,110,69,0.45)' : '#1B6E45'
+  );
+  const lineColors = allD.map((x, i) =>
+    (partial && i === allD.length - 1) ? 'rgba(27,53,100,0.3)' : '#1B3564'
+  );
+
   charts.main = new Chart(document.getElementById('mainChart'), {
     type: 'bar',
     data: {
-      labels: d.map(x => x.label),
+      labels: allD.map(x => x.label + (isCurrentMonthKey(x.key) ? ' *' : '')),
       datasets: [
-        { label: 'Adj. Collections', data: d.map(x => x.adjCollections), backgroundColor: 'rgba(27,110,69,0.75)', borderColor: '#1B6E45', borderWidth: 1, order: 2 },
-        { type: 'line', label: 'Charge Amount', data: d.map(x => x.chargeAmount), borderColor: '#1B3564', borderWidth: 2, backgroundColor: 'transparent', pointRadius: 3, tension: 0.3, order: 1 },
+        {
+          label: 'Adj. Collections',
+          data: allD.map(x => x.adjCollections),
+          backgroundColor: bgColors, borderColor: bdColors, borderWidth: 1, order: 2,
+        },
+        {
+          type: 'line', label: 'Charge Amount',
+          data: allD.map(x => isCurrentMonthKey(x.key) ? null : x.chargeAmount),
+          borderColor: '#1B3564', borderWidth: 2, backgroundColor: 'transparent',
+          pointRadius: 2.5, tension: 0.25, order: 1, spanGaps: false,
+        },
       ],
     },
     options: {
-      responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
-      plugins: { legend: { labels: { boxWidth: 12, padding: 12 } }, tooltip: { ...TOOLTIP, callbacks: { label: c => ' ' + fmtM(c.raw) } } },
-      scales: { x: SCALE_X, y: SCALE_Y_DOLLAR },
+      responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+      plugins: {
+        legend: { labels: { boxWidth: 12, padding: 12 } },
+        tooltip: { ...TOOLTIP, callbacks: { label: c => ' ' + fmtM(c.raw) } },
+      },
+      scales: {
+        x: { ...SCALE_X, ticks: { ...SCALE_X.ticks, maxTicksLimit: 12, maxRotation: 30 } },
+        y: SCALE_Y_DOLLAR,
+      },
     },
   });
 }
 
 function renderCollRate(data) {
   destroyChart('collRate');
-  const d = data.filter(x => x.collRate != null).slice(-24);
+  const d = data.filter(x => x.collRate != null && !isCurrentMonthKey(x.key)).slice(-18);
   if (!d.length) return;
   charts.collRate = new Chart(document.getElementById('collRateChart'), {
     type: 'line',
