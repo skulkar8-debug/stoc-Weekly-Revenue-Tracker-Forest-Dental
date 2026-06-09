@@ -2,1149 +2,2435 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Weekly Revenue Tracker Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SP USA | Dental Practice Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- System fonts only — no Google Fonts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   DESIGN TOKENS  ·  Light / Professional Finance Theme
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --bg:       #EEF1F7;
+  --surface:  #FFFFFF;
+  --surface2: #F4F6FB;
+  --surface3: #EBEEf5;
+  --border:   #DDE2EE;
+  --border2:  #C8CFE0;
 
-    :root {
-      --bg: #ffffff;
-      --surface: #ffffff;
-      --surface2: #f9fafb;
-      --border: #e5e7eb;
-      --text: #111827;
-      --text-muted: #6b7280;
-      --accent: #1d4ed8;
-      --accent2: #059669;
-      --accent3: #d97706;
-      --accent4: #dc2626;
-      --accent5: #7c3aed;
-      --shadow: 0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.08);
-      --shadow-md: 0 2px 8px rgba(0,0,0,.08);
-    }
+  --navy:     #1B3564;   /* SP USA deep navy — primary */
+  --navy-lt:  #2A4B8C;
+  --green:    #1B6E45;   /* positive/up */
+  --green-lt: rgba(27,110,69,0.10);
+  --red:      #C0392B;   /* negative/down */
+  --red-lt:   rgba(192,57,43,0.10);
+  --amber:    #B45309;
+  --amber-lt: rgba(180,83,9,0.10);
+  --blue:     #1D4ED8;
+  --blue-lt:  rgba(29,78,216,0.08);
 
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
+  --text:     #111827;
+  --text2:    #4B5563;
+  --text3:    #9CA3AF;
+  --text4:    #BDC3CF;
 
-    header {
-      background: #111827;
-      border-bottom: 1px solid #1f2937;
-      padding: 14px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
+  --radius:   7px;
+  --radius-sm:5px;
+  --shadow:   0 1px 4px rgba(27,53,100,0.08), 0 0 0 1px var(--border);
+  --shadow-md:0 4px 16px rgba(27,53,100,0.12), 0 0 0 1px var(--border);
+}
 
-    .header-left h1 {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #f9fafb;
-      letter-spacing: -0.01em;
-    }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    .header-left p {
-      font-size: 0.75rem;
-      color: #9ca3af;
-      margin-top: 2px;
-      font-weight: 400;
-    }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
 
-    .header-badge {
-      background: #1f2937;
-      color: #93c5fd;
-      font-size: 0.7rem;
-      font-weight: 500;
-      padding: 4px 10px;
-      border-radius: 4px;
-      letter-spacing: 0.02em;
-      border: 1px solid #374151;
-    }
+/* ── LOADING ──────────────────────────────────────────────── */
+#loadingOverlay {
+  position: fixed; inset: 0;
+  background: rgba(255,255,255,0.97);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 999; gap: 0;
+}
+.loading-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+.loading-logo img { height: 36px; object-fit: contain; }
+.loading-sep { width: 1px; height: 32px; background: var(--border2); }
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--navy);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text  { margin-top: 16px; color: var(--text2);  font-size: 14px; font-weight: 500; }
+.loading-detail{ margin-top: 5px;  color: var(--text3);  font-size: 12px; }
 
-    main {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 28px 32px;
-    }
+/* ── HEADER ──────────────────────────────────────────────── */
+.header {
+  background: var(--navy);
+  padding: 0 28px;
+  display: flex; align-items: stretch; justify-content: space-between;
+  height: 60px;
+  position: sticky; top: 0; z-index: 200;
+}
+.header-left  { display: flex; align-items: center; gap: 18px; }
+.header-right { display: flex; align-items: center; gap: 16px; }
 
-    /* KPI Cards */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 16px;
-      margin-bottom: 28px;
-    }
+.header-logo-sp {
+  height: 34px; object-fit: contain;
+  filter: brightness(0) invert(1);   /* make white on navy */
+}
+.header-logo-stoc {
+  height: 26px; object-fit: contain;
+  filter: brightness(0) invert(1) opacity(0.8);
+}
+.header-sep { width: 1px; height: 28px; background: rgba(255,255,255,0.2); }
+.header-title {
+  font-size: 14px; font-weight: 700;
+  color: #FFFFFF; letter-spacing: 0.1px;
+}
+.header-sub { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 1px; }
 
-    .kpi-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 20px 22px;
-      box-shadow: none;
-      position: relative;
-      overflow: hidden;
-    }
+.status-pill {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: rgba(255,255,255,0.65);
+  background: rgba(255,255,255,0.08);
+  padding: 4px 12px; border-radius: 20px;
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text4); flex-shrink: 0; }
+.dot.green  { background: #4ADE80; box-shadow: 0 0 5px #4ADE80; }
+.dot.amber  { background: #FCD34D; }
+.dot.red    { background: #F87171; }
 
-    .kpi-card::after {
-      content: '';
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 2px;
-    }
+.hbtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 14px; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 12px; font-weight: 600;
+  transition: all 0.15s; border: none; letter-spacing: 0.2px;
+}
+.hbtn.ghost { background: rgba(255,255,255,0.1); color: #fff; }
+.hbtn.ghost:hover { background: rgba(255,255,255,0.18); }
+.hbtn.primary { background: #FFFFFF; color: var(--navy); }
+.hbtn.primary:hover { background: #EEF1F7; }
 
-    .kpi-card.blue::after   { background: #1d4ed8; }
-    .kpi-card.green::after  { background: #059669; }
-    .kpi-card.amber::after  { background: #d97706; }
-    .kpi-card.red::after    { background: #dc2626; }
-    .kpi-card.purple::after { background: #7c3aed; }
+/* ── FILTER BAR ──────────────────────────────────────────── */
+.filter-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 28px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.filter-group { display: flex; align-items: center; gap: 8px; }
+.filter-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.7px; color: var(--text3); white-space: nowrap;
+}
+.filter-bar-right { margin-left: auto; font-size: 11px; color: var(--text3); }
 
-    .kpi-label {
-      font-size: 0.68rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
+/* Toggle view */
+.toggle-group {
+  display: flex; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); overflow: hidden; background: var(--surface2);
+}
+.toggle-btn {
+  padding: 5px 14px; background: transparent;
+  border: none; color: var(--text2); cursor: pointer;
+  font-size: 11px; font-weight: 700; transition: all 0.15s;
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+.toggle-btn.active { background: var(--navy); color: #fff; }
 
-    .kpi-value {
-      font-size: 1.9rem;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      line-height: 1;
-      margin-bottom: 6px;
-      color: var(--text);
-    }
+/* Date inputs */
+input[type="date"] {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text); padding: 5px 10px;
+  border-radius: var(--radius-sm); font-size: 12px;
+  font-family: inherit;
+}
+input[type="date"]:focus { outline: none; border-color: var(--navy); }
 
-    .kpi-sub {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      font-weight: 400;
-    }
+/* ── CUSTOM SEARCHABLE SELECT ─────────────────────────────── */
+.csel {
+  position: relative;
+  user-select: none;
+  min-width: 160px;
+}
+.csel-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 5px 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 12px; color: var(--text);
+  transition: border-color 0.15s;
+  white-space: nowrap;
+}
+.csel-trigger:hover  { border-color: var(--border2); }
+.csel.open .csel-trigger { border-color: var(--navy); }
+.csel-arrow { color: var(--text3); font-size: 9px; transition: transform 0.2s; flex-shrink: 0; }
+.csel.open .csel-arrow { transform: rotate(180deg); }
+.csel-dropdown {
+  display: none;
+  position: absolute; top: calc(100% + 4px); left: 0;
+  min-width: 100%; max-width: 280px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 300; overflow: hidden;
+}
+.csel.open .csel-dropdown { display: block; }
+.csel-search {
+  width: 100%; padding: 8px 12px;
+  border: none; border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  font-size: 12px; color: var(--text);
+  font-family: inherit;
+}
+.csel-search:focus { outline: none; }
+.csel-search::placeholder { color: var(--text3); }
+.csel-options { max-height: 220px; overflow-y: auto; }
+.csel-opt {
+  padding: 8px 12px; cursor: pointer; font-size: 12px;
+  color: var(--text); transition: background 0.1s;
+  display: flex; align-items: center; gap: 8px;
+}
+.csel-opt:hover { background: var(--surface2); }
+.csel-opt.selected { background: rgba(27,53,100,0.07); color: var(--navy); font-weight: 600; }
+.csel-opt.hidden { display: none; }
+.csel-empty { padding: 10px 12px; font-size: 12px; color: var(--text3); text-align: center; }
 
-    .kpi-change {
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 2px 7px;
-      border-radius: 3px;
-      margin-top: 8px;
-    }
+/* ── MULTI-SELECT LOCATIONS ──────────────────────────────── */
+.msel { position: relative; user-select: none; min-width: 180px; }
+.msel-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 5px 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 12px; color: var(--text);
+  transition: border-color 0.15s;
+}
+.msel-trigger:hover  { border-color: var(--border2); }
+.msel.open .msel-trigger { border-color: var(--navy); }
+.msel-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--navy); color: #fff;
+  font-size: 10px; font-weight: 700; min-width: 18px; height: 18px;
+  border-radius: 9px; padding: 0 5px;
+}
+.msel-dropdown {
+  display: none;
+  position: absolute; top: calc(100% + 4px); left: 0;
+  min-width: 240px; max-width: 320px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 300; overflow: hidden;
+}
+.msel.open .msel-dropdown { display: block; }
+.msel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.msel-head-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); }
+.msel-clear { font-size: 11px; color: var(--navy); cursor: pointer; font-weight: 600; }
+.msel-clear:hover { text-decoration: underline; }
+.msel-options { max-height: 220px; overflow-y: auto; padding: 4px 0; }
+.msel-opt {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 12px; cursor: pointer; font-size: 12px;
+  color: var(--text); transition: background 0.1s;
+}
+.msel-opt:hover { background: var(--surface2); }
+.msel-cb {
+  width: 14px; height: 14px; border-radius: 3px;
+  border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; background: var(--surface);
+  transition: all 0.15s;
+}
+.msel-opt.checked .msel-cb {
+  background: var(--navy); border-color: var(--navy);
+}
+.msel-opt.checked .msel-cb::after {
+  content: '✓'; font-size: 9px; color: #fff; font-weight: 700;
+}
+.msel-deal-group { padding: 4px 12px 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); }
 
-    .kpi-change.up   { background: #ecfdf5; color: #065f46; }
-    .kpi-change.down { background: #fef2f2; color: #991b1b; }
+/* ── TABS ────────────────────────────────────────────────── */
+.tabs-bar {
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  padding: 0 28px;
+  display: flex; align-items: flex-end; gap: 2px;
+}
+.tab-btn {
+  padding: 13px 18px 11px;
+  background: transparent; border: none;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  color: var(--text2); border-bottom: 2px solid transparent;
+  margin-bottom: -2px; transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap; letter-spacing: 0.1px;
+}
+.tab-btn:hover { color: var(--navy); }
+.tab-btn.active { color: var(--navy); border-bottom-color: var(--navy); }
+.tab-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--surface3); color: var(--text2);
+  font-size: 10px; font-weight: 700;
+  min-width: 18px; height: 18px; border-radius: 9px; padding: 0 5px;
+  margin-left: 5px;
+}
+.tab-btn.active .tab-count { background: var(--navy); color: #fff; }
 
-    /* Charts grid */
-    .charts-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
 
-    .charts-grid.full { grid-template-columns: 1fr; }
+/* ── MAIN CONTENT ─────────────────────────────────────────── */
+.main { padding: 24px 28px; max-width: 1700px; margin: 0 auto; }
 
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 24px;
-      box-shadow: none;
-    }
+/* ── SECTION HEADING ─────────────────────────────────────── */
+.sec-head {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px; margin-top: 28px;
+}
+.sec-head:first-child { margin-top: 0; }
+.sec-title {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--text3); white-space: nowrap;
+}
+.sec-rule { flex: 1; height: 1px; background: var(--border); }
 
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
+/* ── ALERT / WARNING BANNER ──────────────────────────────── */
+.alert {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px; border-radius: var(--radius-sm);
+  font-size: 12px; margin-bottom: 18px;
+  border-left: 3px solid;
+}
+.alert.warn { background: #FFFBEB; border-color: #F59E0B; color: #92400E; }
+.alert.err  { background: #FEF2F2; border-color: #EF4444; color: #991B1B; }
+.alert-icon { font-size: 14px; flex-shrink: 0; }
 
-    .card-title {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text);
-      letter-spacing: -0.01em;
-    }
+/* ── KPI CARDS ─────────────────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+  gap: 14px;
+}
+.kpi-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 18px;
+  position: relative; overflow: hidden;
+}
+.kpi-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: var(--navy);
+}
+.kpi-card.green::before { background: var(--green); }
+.kpi-card.blue::before  { background: var(--blue); }
+.kpi-card.amber::before { background: var(--amber); }
+.kpi-card.gray::before  { background: var(--border2); }
 
-    .card-subtitle {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      margin-top: 3px;
-      font-weight: 400;
-    }
+.kpi-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.7px; color: var(--text3); margin-bottom: 8px;
+}
+.kpi-value {
+  font-size: 24px; font-weight: 700; color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.4px; line-height: 1.1;
+  margin-bottom: 4px;
+}
+.kpi-value.sm { font-size: 16px; letter-spacing: -0.2px; }
+.kpi-sub { font-size: 11px; color: var(--text2); }
 
-    .chart-wrap {
-      position: relative;
-    }
+/* ── TTM vs LOI BLOCK ────────────────────────────────────── */
+.ttm-block {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 24px;
+}
+.cmp-grid {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 14px; margin-bottom: 22px;
+}
+.cmp-card {
+  background: var(--surface2); border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  padding: 18px; text-align: center;
+}
+.cmp-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.6px; color: var(--text3); margin-bottom: 10px;
+}
+.cmp-value {
+  font-size: 26px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.1;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.cmp-value.unset {
+  font-size: 12px; font-weight: 500; letter-spacing: 0; line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--text3) !important;
+}
+.cmp-sub { font-size: 11px; color: var(--text2); margin-top: 5px; }
 
-    .chart-wrap canvas { width: 100% !important; }
+/* ── CHART CARD ──────────────────────────────────────────── */
+.chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
+.chart-card {
+  background: var(--surface); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 20px 22px;
+}
+.chart-card.full { grid-column: 1 / -1; }
+.chart-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.chart-sub   { font-size: 11px; color: var(--text2); margin-bottom: 16px; }
+.chart-wrap  { position: relative; }
 
-    /* Location dropdown */
-    .loc-filter-wrap {
-      position: relative;
-    }
+/* ── DATA TABLE ─────────────────────────────────────────── */
+.tbl-card {
+  background: var(--surface); border-radius: var(--radius);
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.tbl-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 15px 20px; border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.tbl-head-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.tbl-head-sub   { font-size: 11px; color: var(--text2); }
+.tbl-head-meta  { font-size: 11px; color: var(--text3); }
 
-    .loc-filter-btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 5px 10px;
-      font-size: 0.75rem;
-      font-weight: 500;
-      font-family: 'Inter', sans-serif;
-      color: var(--text);
-      cursor: pointer;
-      white-space: nowrap;
-      min-width: 140px;
-      justify-content: space-between;
-    }
+table.dt { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.dt th {
+  padding: 9px 16px; text-align: right;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--text3);
+  border-bottom: 1.5px solid var(--border);
+  background: var(--surface2); white-space: nowrap;
+}
+table.dt th.l, table.dt td.l { text-align: left; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+table.dt td {
+  padding: 9px 16px; text-align: right;
+  border-bottom: 1px solid var(--border);
+  color: var(--text); white-space: nowrap;
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', 'Courier New', monospace; font-size: 11.5px;
+}
+table.dt tr:last-child td { border-bottom: none; }
+table.dt tr:hover td { background: #F8FAFF; }
+table.dt td.bold  { font-weight: 600; }
+table.dt td.pos   { color: var(--green); font-weight: 600; }
+table.dt td.neg   { color: var(--red);   font-weight: 600; }
 
-    .loc-filter-btn:hover { background: var(--surface2); }
+/* ── YOY GRID ─────────────────────────────────────────────── */
+.yoy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
-    .loc-filter-btn .chevron {
-      font-size: 0.6rem;
-      color: var(--text-muted);
-      transition: transform .15s;
-    }
+/* YoY % badge */
+.yoy-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 8px; border-radius: 3px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 700; font-size: 11px; white-space: nowrap;
+}
+.yoy-badge.pos { background: var(--green-lt); color: var(--green); }
+.yoy-badge.neg { background: var(--red-lt);   color: var(--red);   }
+.partial-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 5px; border-radius: 3px;
+  background: var(--amber-lt); color: var(--amber);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.4px; vertical-align: middle; margin-left: 4px;
+}
 
-    .loc-filter-btn.open .chevron { transform: rotate(180deg); }
+/* ── DEAL SUMMARY TABLE ───────────────────────────────────── */
+.deal-sum-tbl td.deal-name {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 600; font-size: 12.5px;
+}
+.deal-sum-tbl td.period-lbl {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 11px; color: var(--text2);
+}
 
-    .loc-dropdown {
-      display: none;
-      position: absolute;
-      top: calc(100% + 4px);
-      right: 0;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      box-shadow: 0 4px 16px rgba(0,0,0,.1);
-      z-index: 200;
-      min-width: 180px;
-      padding: 6px 0;
-    }
+/* ── LOI CONFIG PANEL ─────────────────────────────────────── */
+.loi-intro { font-size: 12px; color: var(--text2); margin-bottom: 20px; line-height: 1.7; max-width: 680px; }
+.loi-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+  gap: 12px;
+}
+.loi-item {
+  background: var(--surface); border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border); padding: 14px;
+  box-shadow: var(--shadow);
+}
+.loi-deal { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text3); margin-bottom: 8px; }
+.loi-row  { display: flex; align-items: center; gap: 5px; }
+.loi-curr { color: var(--text2); font-size: 13px; }
+.loi-inp {
+  flex: 1; background: var(--surface2);
+  border: 1.5px solid var(--border); color: var(--text);
+  padding: 5px 8px; border-radius: var(--radius-sm); font-size: 12px;
+  font-family: inherit; min-width: 0;
+}
+.loi-inp:focus { outline: none; border-color: var(--navy); }
+.loi-actions { display: flex; gap: 10px; margin-top: 20px; }
 
-    .loc-dropdown.open { display: block; }
+/* ── BUTTONS (light theme) ────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 16px; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 12px; font-weight: 600;
+  transition: all 0.15s; border: 1.5px solid;
+  font-family: inherit; letter-spacing: 0.2px;
+}
+.btn.primary { background: var(--navy); color: #fff; border-color: var(--navy); }
+.btn.primary:hover { background: var(--navy-lt); border-color: var(--navy-lt); }
+.btn.outline { background: transparent; color: var(--navy); border-color: var(--border2); }
+.btn.outline:hover { background: var(--surface2); border-color: var(--navy); }
 
-    .loc-dropdown-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 6px 12px 8px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 4px;
-    }
+/* ── FOOTER ───────────────────────────────────────────────── */
+.footer {
+  text-align: center; padding: 20px 28px;
+  font-size: 11px; color: var(--text3);
+  border-top: 1px solid var(--border); margin-top: 32px;
+}
 
-    .loc-dropdown-header span {
-      font-size: 0.68rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-muted);
-    }
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .chart-row { grid-template-columns: 1fr; }
+  .cmp-grid  { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 720px) {
+  .kpi-grid { grid-template-columns: repeat(2,1fr); }
+  .yoy-grid { grid-template-columns: 1fr; }
+  .main, .filter-bar, .header, .tabs-bar { padding-left: 14px; padding-right: 14px; }
+}
 
-    .loc-toggle-all {
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: var(--accent);
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      padding: 0;
-    }
-
-    .loc-option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 12px;
-      cursor: pointer;
-      font-size: 0.78rem;
-      color: var(--text);
-      transition: background .1s;
-      user-select: none;
-    }
-
-    .loc-option:hover { background: var(--surface2); }
-
-    .loc-option input[type=checkbox] {
-      accent-color: var(--accent);
-      width: 13px;
-      height: 13px;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-
-    .loc-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    /* Tab buttons */
-    .tab-group {
-      display: flex;
-      gap: 2px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 3px;
-    }
-
-    .tab-btn {
-      background: none;
-      border: none;
-      padding: 4px 11px;
-      border-radius: 3px;
-      font-size: 0.72rem;
-      font-weight: 500;
-      cursor: pointer;
-      color: var(--text-muted);
-      font-family: 'Inter', sans-serif;
-      transition: all .15s;
-    }
-
-    .tab-btn.active {
-      background: var(--surface);
-      color: var(--text);
-      font-weight: 600;
-      box-shadow: 0 1px 2px rgba(0,0,0,.08);
-    }
-
-    /* Table */
-    .table-wrap {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.82rem;
-    }
-
-    th {
-      background: var(--surface2);
-      text-align: left;
-      padding: 10px 14px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-    }
-
-    td {
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
-    }
-
-    tr:last-child td { border-bottom: none; }
-
-    tr:hover td { background: var(--surface2); }
-
-    td.num { text-align: right; font-variant-numeric: tabular-nums; }
-    th.num { text-align: right; }
-
-    .badge {
-      display: inline-block;
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 20px;
-    }
-
-    .badge-blue   { background: #dbeafe; color: #1d4ed8; }
-    .badge-green  { background: #d1fae5; color: #065f46; }
-    .badge-amber  { background: #fef3c7; color: #92400e; }
-    .badge-purple { background: #ede9fe; color: #5b21b6; }
-
-    /* LOI Section */
-    .loi-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-top: 4px;
-    }
-
-    .loi-stat {
-      background: var(--surface2);
-      border-radius: 4px;
-      padding: 14px 16px;
-      border: 1px solid var(--border);
-    }
-
-    .loi-stat-label {
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-
-    .loi-stat-value {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: var(--text);
-      letter-spacing: -0.03em;
-    }
-
-    .progress-bar-wrap {
-      margin-top: 16px;
-    }
-
-    .progress-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.73rem;
-      margin-bottom: 6px;
-      color: var(--text-muted);
-    }
-
-    .progress-track {
-      height: 8px;
-      background: var(--border);
-      border-radius: 99px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent2), var(--accent));
-      border-radius: 99px;
-      transition: width .6s ease;
-    }
-
-    /* Color dots */
-    .dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-right: 6px;
-    }
-
-    @media (max-width: 1100px) {
-      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
-      .charts-grid { grid-template-columns: 1fr; }
-      .loi-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (max-width: 700px) {
-      main { padding: 16px; }
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-      header { padding: 12px 16px; }
-    }
-  </style>
+/* ── TOAST ───────────────────────────────────────────────── */
+#toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--navy); color: #fff;
+  padding: 10px 18px; border-radius: var(--radius-sm);
+  font-size: 13px; z-index: 500;
+  box-shadow: var(--shadow-md);
+  transition: opacity 0.3s; opacity: 0; pointer-events: none;
+}
+#toast.show { opacity: 1; }
+</style>
 </head>
 <body>
 
-<header>
-  <div class="header-left">
-    <h1>Weekly Revenue Tracker</h1>
-    <p>Forest Dental · 7 Locations · Data as of June 2026</p>
+<!-- ── LOADING ──────────────────────────────────────────────── -->
+<div id="loadingOverlay">
+  <div class="loading-logo">
+    <img src="https://smilepartnersusa.com/wp-content/uploads/2025/10/SPUSA_Logo-1.png"
+         alt="SP USA" style="height:36px;object-fit:contain;"
+         onerror="this.style.display='none'">
+    <div class="loading-sep"></div>
+    <img src="https://www.stocadvisory.com/_next/image?url=%2Fstoc-main-logo-cropped.png&w=256&q=75"
+         alt="STOC Advisory" style="height:24px;object-fit:contain;"
+         onerror="this.style.display='none'">
   </div>
-  <span class="header-badge">Airtable Live Data</span>
+  <div class="spinner"></div>
+  <div class="loading-text">Connecting to Database…</div>
+  <div class="loading-detail" id="loadingDetail">Fetching Import tabs in parallel</div>
+</div>
+
+<!-- ── HEADER ─────────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-left">
+    <img class="header-logo-sp"
+         src="https://smilepartnersusa.com/wp-content/uploads/2025/10/SPUSA_Logo-1.png"
+         alt="SP USA"
+         onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'SP USA',style:'font-size:18px;font-weight:900;color:#fff;letter-spacing:-0.5px'}))">
+    <div class="header-sep"></div>
+    <div>
+      <div class="header-title">Dental Practice Performance Dashboard</div>
+      <div class="header-sub">Production &amp; Collection Tracker · Live Data</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill">
+      <span class="dot" id="statusDot"></span>
+      <span id="lastUpdated">Connecting…</span>
+    </div>
+    <button class="hbtn ghost" onclick="refreshData()">↻ Refresh</button>
+    <img class="header-logo-stoc"
+         src="https://www.stocadvisory.com/_next/image?url=%2Fstoc-main-logo-cropped.png&w=256&q=75"
+         alt="STOC Advisory"
+         onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'STOC',style:'font-size:13px;font-weight:700;color:rgba(255,255,255,0.7)'}))">
+  </div>
 </header>
 
-<main>
-
-  <!-- KPI Cards -->
-  <div class="kpi-grid">
-    <div class="kpi-card blue">
-      <div class="kpi-label">TTM Adj. Production</div>
-      <div class="kpi-value">$12.45M</div>
-      <div class="kpi-sub">Trailing 12 Months · May 2026</div>
-      <div class="kpi-change up">▲ +3.75% vs LOI</div>
-    </div>
-    <div class="kpi-card green">
-      <div class="kpi-label">5-Month YoY Growth</div>
-      <div class="kpi-value">+7.2%</div>
-      <div class="kpi-sub">Jan–May 2026 vs Jan–May 2025</div>
-      <div class="kpi-change up">▲ Ahead of prior year</div>
-    </div>
-    <div class="kpi-card amber">
-      <div class="kpi-label">Avg Days to Collection</div>
-      <div class="kpi-value">34</div>
-      <div class="kpi-sub">TTM Ending May 2026</div>
-      <div class="kpi-sub" style="margin-top:8px">Days to payment</div>
-    </div>
-    <div class="kpi-card purple">
-      <div class="kpi-label">Avg Encounters / Month</div>
-      <div class="kpi-value">1,420</div>
-      <div class="kpi-sub">TTM Ending May 2026</div>
-    </div>
-    <div class="kpi-card red">
-      <div class="kpi-label">LOI Benchmark</div>
-      <div class="kpi-value">$9.0M</div>
-      <div class="kpi-sub">TTM Sep-25 LOI Target</div>
-      <div class="kpi-change up">▲ $3.45M above LOI</div>
-    </div>
-  </div>
-
-  <!-- Revenue Trend -->
-  <div class="card" style="margin-bottom:20px">
-    <div class="card-header">
-      <div>
-        <div class="card-title">Monthly Adjusted Collections</div>
-        <div class="card-subtitle" id="trendSubtitle">Jan 2024 – Jun 2026 · All Locations Combined</div>
+<!-- ── FILTER BAR ──────────────────────────────────────────── -->
+<div class="filter-bar">
+  <!-- Searchable Deal Select -->
+  <div class="filter-group">
+    <span class="filter-label">Deal</span>
+    <div class="csel" id="dealCsel">
+      <div class="csel-trigger" onclick="toggleCsel('dealCsel')">
+        <span id="dealCselLabel">All Deals</span>
+        <span class="csel-arrow">▼</span>
       </div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <!-- Location filter -->
-        <div class="loc-filter-wrap" id="locFilterWrap">
-          <button class="loc-filter-btn" id="locFilterBtn" onclick="toggleLocDropdown()">
-            <span id="locFilterLabel">All Locations</span>
-            <span class="chevron">▼</span>
-          </button>
-          <div class="loc-dropdown" id="locDropdown">
-            <div class="loc-dropdown-header">
-              <span>Locations</span>
-              <button class="loc-toggle-all" id="toggleAllBtn" onclick="toggleAllLocations()">Deselect All</button>
-            </div>
-            <label class="loc-option" onclick="toggleLoc('Toledo')">
-              <input type="checkbox" id="chk-Toledo" checked />
-              <span class="loc-dot" style="background:#3b82f6"></span>Toledo
-            </label>
-            <label class="loc-option" onclick="toggleLoc('Maumee')">
-              <input type="checkbox" id="chk-Maumee" checked />
-              <span class="loc-dot" style="background:#10b981"></span>Maumee
-            </label>
-            <label class="loc-option" onclick="toggleLoc('Kalamazoo')">
-              <input type="checkbox" id="chk-Kalamazoo" checked />
-              <span class="loc-dot" style="background:#f59e0b"></span>Kalamazoo
-            </label>
-            <label class="loc-option" onclick="toggleLoc('Northwood')">
-              <input type="checkbox" id="chk-Northwood" checked />
-              <span class="loc-dot" style="background:#ef4444"></span>Northwood
-            </label>
-            <label class="loc-option" onclick="toggleLoc('Wickliffe')">
-              <input type="checkbox" id="chk-Wickliffe" checked />
-              <span class="loc-dot" style="background:#8b5cf6"></span>Wickliffe
-            </label>
-            <label class="loc-option" onclick="toggleLoc('Parma')">
-              <input type="checkbox" id="chk-Parma" checked />
-              <span class="loc-dot" style="background:#06b6d4"></span>Parma
-            </label>
-            <label class="loc-option" onclick="toggleLoc('Rocky River')">
-              <input type="checkbox" id="chk-Rocky River" checked />
-              <span class="loc-dot" style="background:#f97316"></span>Rocky River
-            </label>
-          </div>
+      <div class="csel-dropdown">
+        <input class="csel-search" type="text" placeholder="Search deals…" oninput="filterCselOpts(this,'dealCsel')" autocomplete="off">
+        <div class="csel-options" id="dealCselOpts">
+          <div class="csel-opt selected" data-value="" onclick="selectCsel('dealCsel','','All Deals')">All Deals</div>
         </div>
-        <!-- Metric tabs -->
-        <div class="tab-group">
-          <button class="tab-btn active" onclick="setTrendView('collections', this)">Collections</button>
-          <button class="tab-btn" onclick="setTrendView('charge', this)">Charge Amt</button>
-          <button class="tab-btn" onclick="setTrendView('encounters', this)">Encounters</button>
-          <button class="tab-btn" onclick="setTrendView('procedures', this)">Procedures</button>
-        </div>
-      </div>
-    </div>
-    <div class="chart-wrap" style="height:280px">
-      <canvas id="trendChart"></canvas>
-    </div>
-  </div>
-
-  <!-- YoY + Location Charts -->
-  <div class="charts-grid" style="margin-bottom:20px">
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Year-over-Year Comparison</div>
-          <div class="card-subtitle">Monthly Adj. Collections by Year</div>
-        </div>
-      </div>
-      <div class="chart-wrap" style="height:260px">
-        <canvas id="yoyChart"></canvas>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Revenue by Location</div>
-          <div class="card-subtitle">Total Adj. Collections All-Time</div>
-        </div>
-      </div>
-      <div class="chart-wrap" style="height:260px">
-        <canvas id="locationChart"></canvas>
       </div>
     </div>
   </div>
 
-  <!-- Stacked Location Chart -->
-  <div class="card" style="margin-bottom:20px">
-    <div class="card-header">
-      <div>
-        <div class="card-title">Monthly Revenue by Location</div>
-        <div class="card-subtitle">Stacked Adj. Collections per location · Jan 2026 – Jun 2026</div>
+  <!-- Multi-select Locations -->
+  <div class="filter-group">
+    <span class="filter-label">Location</span>
+    <div class="msel" id="locationMsel">
+      <div class="msel-trigger" onclick="toggleMsel('locationMsel')">
+        <span id="locationMselLabel">All Locations</span>
+        <span class="csel-arrow">▼</span>
       </div>
-    </div>
-    <div class="chart-wrap" style="height:280px">
-      <canvas id="stackedChart"></canvas>
+      <div class="msel-dropdown">
+        <div class="msel-head">
+          <span class="msel-head-label">Select Locations</span>
+          <span class="msel-clear" onclick="clearMsel('locationMsel')">Clear all</span>
+        </div>
+        <div class="msel-options" id="locationMselOpts"></div>
+      </div>
     </div>
   </div>
 
-  <!-- Bottom Row: LOI + Table -->
-  <div class="charts-grid" style="margin-bottom:0">
-    <!-- LOI Card -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">LOI Period Production</div>
-          <div class="card-subtitle">TTM Sep-25 LOI · Forest Dental</div>
-        </div>
-        <span class="badge badge-blue">Active</span>
-      </div>
+  <!-- Date Range -->
+  <div class="filter-group">
+    <span class="filter-label">From</span>
+    <input type="date" id="filterStart" onchange="onFilterChange()">
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">To</span>
+    <input type="date" id="filterEnd" onchange="onFilterChange()">
+  </div>
 
-      <div class="loi-grid">
-        <div class="loi-stat">
-          <div class="loi-stat-label">LOI Amount</div>
-          <div class="loi-stat-value">$9,000,000</div>
-        </div>
-        <div class="loi-stat">
-          <div class="loi-stat-label">TTM Actual</div>
-          <div class="loi-stat-value" style="color:#047857">$12,450,000</div>
-        </div>
-        <div class="loi-stat">
-          <div class="loi-stat-label">TTM vs LOI</div>
-          <div class="loi-stat-value" style="color:#1d4ed8">+38.3%</div>
-        </div>
-        <div class="loi-stat">
-          <div class="loi-stat-label">Period Start</div>
-          <div class="loi-stat-value" style="font-size:1rem">Jun 19, 2026</div>
-        </div>
-        <div class="loi-stat">
-          <div class="loi-stat-label">Period End</div>
-          <div class="loi-stat-value" style="font-size:1rem">Jun 24, 2026</div>
-        </div>
-        <div class="loi-stat">
-          <div class="loi-stat-label">Duration</div>
-          <div class="loi-stat-value">5 days</div>
-        </div>
-      </div>
+  <!-- View Toggle -->
+  <div class="filter-group">
+    <span class="filter-label">View</span>
+    <div class="toggle-group">
+      <button class="toggle-btn active" id="btnMonthly" onclick="setView('monthly')">Monthly</button>
+      <button class="toggle-btn"        id="btnWeekly"  onclick="setView('weekly')">Weekly</button>
+    </div>
+  </div>
 
-      <div class="progress-bar-wrap">
-        <div class="progress-label">
-          <span>LOI Attainment</span>
-          <span style="font-weight:700; color:#047857">138.3%</span>
-        </div>
-        <div class="progress-track">
-          <div class="progress-fill" style="width:100%"></div>
-        </div>
-        <div style="font-size:0.7rem; color:var(--text-muted); margin-top:6px">TTM Adjusted Production exceeds LOI benchmark by $3.45M</div>
+  <div class="filter-bar-right" id="recordCount"></div>
+</div>
+
+<!-- ── TABS BAR ────────────────────────────────────────────── -->
+<div class="tabs-bar">
+  <button class="tab-btn active" data-tab="overview"  onclick="switchTab('overview')">Overview</button>
+  <button class="tab-btn"        data-tab="trends"    onclick="switchTab('trends')">Trends</button>
+  <button class="tab-btn"        data-tab="yoy"       onclick="switchTab('yoy')">YoY Analysis</button>
+  <button class="tab-btn"        data-tab="table"     onclick="switchTab('table')">Data Table</button>
+  <button class="tab-btn"        data-tab="loi"       onclick="switchTab('loi')">LOI Config</button>
+</div>
+
+<!-- ── MAIN CONTENT ────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- Alerts area -->
+  <div id="alertArea"></div>
+
+  <!-- ════════════════════════════════════════════
+       TAB: OVERVIEW
+       ════════════════════════════════════════════ -->
+  <div id="tab-overview" class="tab-panel active">
+
+    <div class="sec-head"><span class="sec-title">Key Performance Indicators</span><span class="sec-rule"></span></div>
+    <div class="kpi-grid" style="margin-bottom:24px">
+      <div class="kpi-card">
+        <div class="kpi-label">TTM Adj. Collections</div>
+        <div class="kpi-value" id="kpiTTM">—</div>
+        <div class="kpi-sub" id="kpiTTMPeriod">Trailing 12 months</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-label">Total Charge Amount</div>
+        <div class="kpi-value" id="kpiCharge">—</div>
+        <div class="kpi-sub">Selected period</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Total Adj. Collections</div>
+        <div class="kpi-value" id="kpiCollections">—</div>
+        <div class="kpi-sub">Selected period</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-label">Collection Rate</div>
+        <div class="kpi-value" id="kpiCollRate">—</div>
+        <div class="kpi-sub">Adj. Collections ÷ Charges</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-label">Avg Daily Production</div>
+        <div class="kpi-value" id="kpiAvgDaily">—</div>
+        <div class="kpi-sub" id="kpiAvgDailySub">Per working day</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Patient Encounters</div>
+        <div class="kpi-value" id="kpiEncounters">—</div>
+        <div class="kpi-sub">Total encounters</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Procedures / Txns</div>
+        <div class="kpi-value" id="kpiProcedures">—</div>
+        <div class="kpi-sub">Total procedures</div>
+      </div>
+      <div class="kpi-card gray">
+        <div class="kpi-label">Active Locations</div>
+        <div class="kpi-value" id="kpiLocations">—</div>
+        <div class="kpi-sub" id="kpiLocationsSub">In selected view</div>
+      </div>
+      <div class="kpi-card gray">
+        <div class="kpi-label">Latest Data Point</div>
+        <div class="kpi-value sm" id="kpiLatestDate">—</div>
+        <div class="kpi-sub" id="kpiLatestDateSub">Most recent entry</div>
       </div>
     </div>
 
-    <!-- KPI Details Table -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">KPI Summary</div>
-          <div class="card-subtitle">TTM Ending May 2026</div>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table>
+    <div class="sec-head"><span class="sec-title">Deal Summary — TTM vs LOI</span><span class="sec-rule"></span></div>
+    <div class="tbl-card" style="margin-bottom:24px">
+      <div style="overflow-x:auto">
+        <table class="dt deal-sum-tbl">
           <thead>
             <tr>
-              <th>KPI</th>
-              <th class="num">Value</th>
-              <th>Unit</th>
-              <th>Period</th>
+              <th class="l">Deal</th>
+              <th class="l">TTM Period</th>
+              <th>Current TTM</th>
+              <th>LOI Revenue</th>
+              <th>$ Variance</th>
+              <th>% vs LOI</th>
+              <th class="l">Latest Data</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td><strong>TTM Adjusted Production</strong></td>
-              <td class="num" style="color:#1d4ed8; font-weight:700">$12,450,000</td>
-              <td><span class="badge badge-blue">USD</span></td>
-              <td>TTM Ending May 2026</td>
-            </tr>
-            <tr>
-              <td><strong>TTM vs LOI % Change</strong></td>
-              <td class="num" style="color:#047857; font-weight:700">+3.75%</td>
-              <td><span class="badge badge-green">Percent</span></td>
-              <td>TTM Ending May 2026</td>
-            </tr>
-            <tr>
-              <td><strong>5-Month YoY Growth</strong></td>
-              <td class="num" style="color:#047857; font-weight:700">+7.2%</td>
-              <td><span class="badge badge-green">Percent</span></td>
-              <td>Jan–May 2026 vs 2025</td>
-            </tr>
-            <tr>
-              <td><strong>Avg Days to Collection</strong></td>
-              <td class="num" style="font-weight:700">34</td>
-              <td><span class="badge badge-amber">Days</span></td>
-              <td>TTM Ending May 2026</td>
-            </tr>
-            <tr>
-              <td><strong>Encounters / Month (Avg)</strong></td>
-              <td class="num" style="font-weight:700">1,420</td>
-              <td><span class="badge badge-purple">Number</span></td>
-              <td>TTM Ending May 2026</td>
-            </tr>
+          <tbody id="dealSummaryBody">
+            <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>
           </tbody>
         </table>
       </div>
     </div>
-  </div>
 
-  <!-- Recent Monthly Performance Table -->
-  <div class="card" style="margin-top:20px">
-    <div class="card-header">
-      <div>
-        <div class="card-title">Monthly Performance Summary</div>
-        <div class="card-subtitle">Jan 2025 – Jun 2026 · All Locations</div>
+    <div class="sec-head"><span class="sec-title">Portfolio TTM vs LOI</span><span class="sec-rule"></span></div>
+    <div class="ttm-block">
+      <div class="cmp-grid">
+        <div class="cmp-card">
+          <div class="cmp-label">TTM Adj. Collections</div>
+          <div class="cmp-value" id="cmpTTM" style="color:var(--green)">—</div>
+          <div class="cmp-sub" id="cmpTTMPeriod">Most recent 12 months</div>
+        </div>
+        <div class="cmp-card">
+          <div class="cmp-label">LOI Adj. Collections</div>
+          <div class="cmp-value" id="cmpLOI" style="color:var(--navy)">—</div>
+          <div class="cmp-sub">From LOI Config tab (editable)</div>
+        </div>
+        <div class="cmp-card">
+          <div class="cmp-label">$ Variance (TTM − LOI)</div>
+          <div class="cmp-value" id="cmpVarD">—</div>
+          <div class="cmp-sub" id="cmpVarDSub">Set LOI values to enable</div>
+        </div>
+        <div class="cmp-card">
+          <div class="cmp-label">% Variance</div>
+          <div class="cmp-value" id="cmpVarP">—</div>
+          <div class="cmp-sub">TTM vs LOI</div>
+        </div>
+      </div>
+      <div class="chart-title" style="margin-bottom:12px;">Rolling TTM Trend</div>
+      <div class="chart-wrap"><canvas id="ttmTrendChart" height="170"></canvas></div>
+    </div>
+
+  </div><!-- /tab-overview -->
+
+  <!-- ════════════════════════════════════════════
+       TAB: TRENDS
+       ════════════════════════════════════════════ -->
+  <div id="tab-trends" class="tab-panel">
+    <div class="sec-head">
+      <span class="sec-title" id="trendLabel">Monthly Trend</span>
+      <span class="sec-rule"></span>
+    </div>
+    <div class="chart-row" style="margin-bottom:16px">
+      <div class="chart-card">
+        <div class="chart-title" id="mainChartTitle">Monthly Adjusted Collections</div>
+        <div class="chart-sub" id="mainChartSub">Bars = Adj. Collections · Line = Charge Amount</div>
+        <div class="chart-wrap"><canvas id="mainChart" height="260"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Collection Rate by Period</div>
+        <div class="chart-sub">Adj. Collections ÷ Charge Amount</div>
+        <div class="chart-wrap"><canvas id="collRateChart" height="260"></canvas></div>
       </div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Month</th>
-            <th class="num">Adj. Collections</th>
-            <th class="num">Charge Amount</th>
-            <th class="num">Adj. Coll. %</th>
-            <th class="num">Procedures</th>
-            <th class="num">Encounters</th>
-            <th class="num">Procs / Enc</th>
-          </tr>
-        </thead>
-        <tbody id="monthlyTableBody"></tbody>
-      </table>
+    <div class="chart-card full">
+      <div class="chart-title">Rolling TTM Adj. Collections</div>
+      <div class="chart-sub">Trailing 12-month sum, updated each month · dashed line = LOI target (if set)</div>
+      <div class="chart-wrap"><canvas id="ttmTrendChart2" height="220"></canvas></div>
     </div>
-  </div>
+  </div><!-- /tab-trends -->
+
+  <!-- ════════════════════════════════════════════
+       TAB: YOY ANALYSIS
+       ════════════════════════════════════════════ -->
+  <div id="tab-yoy" class="tab-panel">
+    <div class="sec-head"><span class="sec-title">Year-over-Year Growth · Most Recent 5 Months</span><span class="sec-rule"></span></div>
+    <div class="yoy-grid" style="margin-bottom:20px">
+      <div class="chart-card">
+        <div class="chart-title">YoY Adjusted Collections</div>
+        <div class="chart-sub">Current year (green) vs. prior year (navy) — same calendar month</div>
+        <div class="chart-wrap"><canvas id="yoyChart" height="260"></canvas></div>
+      </div>
+      <div class="tbl-card">
+        <div class="tbl-head">
+          <div>
+            <div class="tbl-head-title">YoY Comparison</div>
+            <div class="tbl-head-sub">Adj. Collections — most recent 5 months</div>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="dt">
+            <thead>
+              <tr>
+                <th class="l">Month</th>
+                <th>Current Yr</th>
+                <th>Prior Yr</th>
+                <th>$ Change</th>
+                <th>% Growth</th>
+              </tr>
+            </thead>
+            <tbody id="yoyTableBody">
+              <tr><td class="l" colspan="5" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- Extended YoY table — all available months -->
+    <div class="tbl-card">
+      <div class="tbl-head">
+        <div>
+          <div class="tbl-head-title">Full YoY History</div>
+          <div class="tbl-head-sub">All months with prior-year comparison available</div>
+        </div>
+        <div class="tbl-head-meta" id="yoyHistMeta"></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead>
+            <tr>
+              <th class="l">Month</th>
+              <th>Current Yr</th>
+              <th>Prior Yr</th>
+              <th>$ Change</th>
+              <th>% Growth</th>
+            </tr>
+          </thead>
+          <tbody id="yoyHistBody">
+            <tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /tab-yoy -->
+
+  <!-- ════════════════════════════════════════════
+       TAB: DATA TABLE
+       ════════════════════════════════════════════ -->
+  <div id="tab-table" class="tab-panel">
+    <div class="sec-head"><span class="sec-title" id="perfTableSectionLabel">Monthly Performance Detail</span><span class="sec-rule"></span></div>
+    <div class="tbl-card">
+      <div class="tbl-head">
+        <div>
+          <div class="tbl-head-title" id="perfTableTitle">Monthly Summary</div>
+          <div class="tbl-head-sub">All periods · newest first</div>
+        </div>
+        <div class="tbl-head-meta" id="perfTableMeta"></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead id="perfTableHead"></thead>
+          <tbody id="perfTableBody">
+            <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:28px;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Revenue Period Analysis: T, T-1, T-2 × YoY per location -->
+    <div class="sec-head" style="margin-top:28px"><span class="sec-title" id="periodSpotlightLabel">Revenue Period Analysis · T / T-1 / T-2</span><span class="sec-rule"></span></div>
+    <div class="tbl-card" style="margin-bottom:24px">
+      <div class="tbl-head">
+        <div>
+          <div class="tbl-head-title">Rolling Period vs Prior Year — by Location</div>
+          <div class="tbl-head-sub" id="periodSpotlightSub">3 most recent periods · current year vs same period prior year</div>
+        </div>
+        <div class="tbl-head-meta" id="periodSpotlightMeta"></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead id="periodSpotlightHead"></thead>
+          <tbody id="periodSpotlightBody">
+            <tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="sec-head" style="margin-top:28px"><span class="sec-title">Location Breakdown</span><span class="sec-rule"></span></div>
+    <div class="tbl-card">
+      <div class="tbl-head">
+        <div>
+          <div class="tbl-head-title">Per-Location Performance</div>
+          <div class="tbl-head-sub" id="locTableSub">Sorted by Adj. Collections · filtered period</div>
+        </div>
+        <div class="tbl-head-meta" id="locTableMeta"></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead>
+            <tr>
+              <th class="l">Location</th>
+              <th class="l">Deal</th>
+              <th>Adj Collections</th>
+              <th>Charges</th>
+              <th>Coll Rate</th>
+              <th>Encounters</th>
+              <th>Avg Ticket</th>
+              <th>vs Prior Period</th>
+              <th>% Chg</th>
+            </tr>
+          </thead>
+          <tbody id="locTableBody">
+            <tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Location Revenue Detail (monthly × year cross-tab) ── -->
+    <div class="sec-head" style="margin-top:28px">
+      <span class="sec-title">Location Detail — Revenue &amp; Avg Ticket by Month</span>
+      <span class="sec-rule"></span>
+    </div>
+    <div class="tbl-card">
+      <div class="tbl-head">
+        <div>
+          <div class="tbl-head-title" id="locDetailTitle">Select a location</div>
+          <div class="tbl-head-sub" style="font-size:11px;color:var(--text3)">Monthly revenue (net adj. collections) and avg ticket price per fiscal year</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="locDetailSelect" class="filter-sel" style="min-width:200px" onchange="renderLocDetail()">
+            <option value="">— pick a location —</option>
+          </select>
+        </div>
+      </div>
+      <div id="locDetailBody" style="overflow-x:auto">
+        <div style="text-align:center;color:var(--text3);padding:28px;font-size:12px">Choose a location from the dropdown above</div>
+      </div>
+    </div>
+  </div><!-- /tab-table -->
+
+  <!-- ════════════════════════════════════════════
+       TAB: LOI CONFIG
+       ════════════════════════════════════════════ -->
+  <div id="tab-loi" class="tab-panel">
+    <div class="sec-head"><span class="sec-title">LOI Configuration</span><span class="sec-rule"></span></div>
+    <p class="loi-intro">
+      Enter the LOI-period adjusted collection figure for each deal.
+      These are the baseline revenue figures cited during due diligence, used to compare
+      against TTM actuals in the Overview tab. Values are saved in your browser's local storage
+      and persist between sessions.
+    </p>
+    <div class="loi-grid" id="loiGrid"></div>
+    <div class="loi-actions">
+      <button class="btn primary" onclick="saveLOI()">💾 Save LOI Values</button>
+      <button class="btn outline"  onclick="switchTab('overview')">← Back to Overview</button>
+    </div>
+  </div><!-- /tab-loi -->
 
 </main>
 
+<footer class="footer">
+  SP USA Dental Practice Dashboard · Built by STOC Advisory ·
+  Data sourced from Google Sheets Import tabs · No raw data upload required ·
+  Refreshes on demand
+</footer>
+
+<div id="toast"></div>
+
+<!-- ════════════════════════════════════════════════════════════
+     JAVASCRIPT
+     ════════════════════════════════════════════════════════════ -->
 <script>
-// ============================================================
-// DATA
-// ============================================================
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+'use strict';
 
-const TREND_LABELS = ['Jan 2024','Feb 2024','Mar 2024','Apr 2024','May 2024','Jun 2024','Jul 2024','Aug 2024','Sep 2024','Oct 2024','Nov 2024','Dec 2024','Jan 2025','Feb 2025','Mar 2025','Apr 2025','May 2025','Jun 2025','Jul 2025','Aug 2025','Sep 2025','Oct 2025','Nov 2025','Dec 2025','Jan 2026','Feb 2026','Mar 2026','Apr 2026','May 2026','Jun 2026'];
+/* ════════════════════════════════════════════════════════════
+   CONFIGURATION
+   ════════════════════════════════════════════════════════════ */
+const SHEET_ID = '1OzhBnj0YI5GfhTd20uFcw_qxeLKurj7IzJSCQgdbUDQ';
 
-const locMonthlyAdj = {
-  'Toledo':      [209367,220129,166056,208324,192224,161136,202787,172498,155168,181362,141290,177488,176523,185975,204238,198410,168485,152940,163131,189936,180811,160599,138392,157651,198156,199963,209924,392375,322875,0],
-  'Maumee':      [140087,158726,184681,182381,186003,215836,189474,141220,156270,154605,191258,172597,241009,201738,201987,237842,169469,171032,177965,147354,106649,173929,165089,129111,158512,166491,204190,356933,351694,43630],
-  'Kalamazoo':   [84883,101912,104253,107227,80038,74571,78563,89088,80915,85314,88648,58737,99431,70055,100118,120556,113303,113700,126613,68105,111493,109439,84612,85737,111685,101544,138936,202512,194752,43080],
-  'Northwood':   [145108,111082,97499,82239,111600,63287,78488,80935,62535,81166,85790,83981,119155,109261,123996,122728,124005,115282,87738,101424,88485,92967,68750,79946,99408,90343,98193,246648,172583,0],
-  'Wickliffe':   [77722,54577,73232,71158,60228,55529,61777,60649,48919,72951,75798,42673,73132,25773,65970,48275,49360,44090,48463,53821,59991,72089,43055,40775,61798,46872,68737,129100,99059,20728],
-  'Parma':       [98368,109352,84680,76548,55832,53871,47110,46313,66720,60485,38762,51556,87698,70963,42869,43352,82498,39235,52852,23664,62503,39160,65775,29389,14713,28010,60132,58964,78740,8942],
-  'Rocky River': [58366,40471,37528,26038,9785,33100,18429,43826,35716,29103,58929,56102,59627,32052,50973,22985,22556,54420,33419,49902,45433,35530,62661,18282,19180,27607,43352,54218,30056,31012],
-};
-
-const ALL_LOCS = ['Toledo','Maumee','Kalamazoo','Northwood','Wickliffe','Parma','Rocky River'];
-let selectedLocs = new Set(ALL_LOCS);
-
-const monthlyData = [
-  { y:2024, m:'Jan', adj:813901,  charge:873886,  procs:6173,  enc:1860 },
-  { y:2024, m:'Feb', adj:796249,  charge:855516,  procs:5961,  enc:1797 },
-  { y:2024, m:'Mar', adj:747929,  charge:804847,  procs:5732,  enc:1710 },
-  { y:2024, m:'Apr', adj:753915,  charge:810182,  procs:6175,  enc:1871 },
-  { y:2024, m:'May', adj:695711,  charge:750030,  procs:5820,  enc:1830 },
-  { y:2024, m:'Jun', adj:657330,  charge:712624,  procs:5232,  enc:1635 },
-  { y:2024, m:'Jul', adj:676628,  charge:729971,  procs:5694,  enc:1724 },
-  { y:2024, m:'Aug', adj:634529,  charge:681824,  procs:6382,  enc:2021 },
-  { y:2024, m:'Sep', adj:606243,  charge:653572,  procs:6084,  enc:1861 },
-  { y:2024, m:'Oct', adj:664986,  charge:714535,  procs:7227,  enc:2271 },
-  { y:2024, m:'Nov', adj:680475,  charge:734817,  procs:6340,  enc:1942 },
-  { y:2024, m:'Dec', adj:643134,  charge:696653,  procs:6409,  enc:1980 },
-  { y:2025, m:'Jan', adj:856575,  charge:926483,  procs:7257,  enc:2129 },
-  { y:2025, m:'Feb', adj:695817,  charge:754482,  procs:6643,  enc:1944 },
-  { y:2025, m:'Mar', adj:790150,  charge:852142,  procs:7621,  enc:2210 },
-  { y:2025, m:'Apr', adj:794148,  charge:857595,  procs:7309,  enc:2274 },
-  { y:2025, m:'May', adj:729676,  charge:784238,  procs:6964,  enc:2113 },
-  { y:2025, m:'Jun', adj:690699,  charge:743966,  procs:6470,  enc:2008 },
-  { y:2025, m:'Jul', adj:690182,  charge:741967,  procs:7047,  enc:2212 },
-  { y:2025, m:'Aug', adj:634205,  charge:683748,  procs:6692,  enc:1985 },
-  { y:2025, m:'Sep', adj:655365,  charge:700186,  procs:6734,  enc:2031 },
-  { y:2025, m:'Oct', adj:683713,  charge:734838,  procs:7333,  enc:2225 },
-  { y:2025, m:'Nov', adj:628334,  charge:679030,  procs:5995,  enc:1817 },
-  { y:2025, m:'Dec', adj:540892,  charge:580969,  procs:6036,  enc:1850 },
-  { y:2026, m:'Jan', adj:663452,  charge:711428,  procs:6572,  enc:1964 },
-  { y:2026, m:'Feb', adj:660831,  charge:710883,  procs:6658,  enc:2021 },
-  { y:2026, m:'Mar', adj:823463,  charge:884912,  procs:7682,  enc:2256 },
-  { y:2026, m:'Apr', adj:1440751, charge:1549684, procs:13797, enc:3927 },
-  { y:2026, m:'May', adj:1249758, charge:1346159, procs:12240, enc:3714 },
-  { y:2026, m:'Jun', adj:147392,  charge:158365,  procs:1446,  enc:532,  partial:true },
+/*
+  Add new deals here — tab name must match the Import tab name exactly.
+  granularity: 'daily' = one row per working day | 'monthly' = one row per calendar month
+  Tabs with no data will be silently skipped (shown in status bar if they fail).
+*/
+const DEALS = [
+  { name: 'Lakeview',               tab: 'Import-Lakeview',                   granularity: 'daily'   },
+  { name: 'Forest Dental',          tab: 'Import-Forest Dental',              granularity: 'daily'   },
+  { name: 'Kreit',                  tab: 'Import-Kreit',                      granularity: 'daily'   },
+  { name: 'Atlanta Endo',           tab: 'Import-Atlanta Endo',               granularity: 'monthly' },
+  { name: 'Favia',                  tab: 'Import-Favia',                      granularity: 'daily'   },
+  { name: 'Blankenship',            tab: 'Import-Blankenship',                granularity: 'daily'   },
+  { name: 'Buford',                 tab: 'Import-Buford',                     granularity: 'daily'   },
+  { name: 'B Hills',                tab: 'Import-B Hills',                    granularity: 'daily'   },
+  { name: 'Town',                   tab: 'Import-Town',                       granularity: 'daily'   },
+  { name: 'Kedron',                 tab: 'Import-Kedron',                     granularity: 'daily'   },
+  { name: 'Grace Dental',           tab: 'Import-Grace Dental',               granularity: 'daily'   },
+  { name: 'Dental Health & Beauty', tab: 'Import-Dental Health and Beauty',   granularity: 'daily'   },
+  { name: 'AC Dentistry',           tab: 'Import-AC Dentistry',               granularity: 'daily'   },
+  { name: 'Solon & Mentor',         tab: 'Import-Solon and Mentor',           granularity: 'daily'   },
 ];
 
-const locationData = [
-  { name:'Toledo',      total:5588211 },
-  { name:'Maumee',      total:5477761 },
-  { name:'Kalamazoo',   total:3029821 },
-  { name:'Northwood',   total:3024620 },
-  { name:'Wickliffe',   total:1806305 },
-  { name:'Parma',       total:1679055 },
-  { name:'Rocky River', total:1140659 },
-];
-
-const loc2026 = {
-  labels: ['Jan','Feb','Mar','Apr','May','Jun'],
-  Toledo:      [198156, 199963, 209924, 392375, 322875,      0],
-  Maumee:      [158512, 166491, 204190, 356933, 351694,  43630],
-  Kalamazoo:   [111685, 101544, 138936, 202512, 194752,  43080],
-  Northwood:   [ 99408,  90343,  98193, 246648, 172583,      0],
-  Wickliffe:   [ 61798,  46872,  68737, 129100,  99059,  20728],
-  Parma:       [ 14713,  28010,  60132,  58964,  78740,   8942],
-  'Rocky River':[ 19180, 27607,  43352,  54218,  30056,  31012],
+/* Column synonym map — checked in order, first match wins (case-insensitive after normMap) */
+const COL_MAP = {
+  adjCollections: ['Adjusted Collections', 'Revenue', 'Adj Collections', 'Adjusted Collection'],
+  chargeAmount:   ['Charge Amount', 'Charges', 'Total Charges', 'Charge'],
+  procedures:     ['Procedures', 'Transactions', 'Procedure Count'],
+  encounters:     ['Encounters', 'Patient Encounters', 'Patients'],
+  adjPct:         ['Adj. Collection %', 'Adj Collection %', 'Collection %', 'Adj. Collections %'],
 };
 
-// ============================================================
-// CHARTS
-// ============================================================
-Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-Chart.defaults.font.size = 11;
-Chart.defaults.font.weight = '500';
+const MO_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MO_FULL  = ['January','February','March','April','May','June','July',
+                  'August','September','October','November','December'];
 
-const PALETTE = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316'];
+/* ════════════════════════════════════════════════════════════
+   STATE
+   ════════════════════════════════════════════════════════════ */
+let allData      = [];
+let filteredData = [];
+let currentView  = 'monthly';
+let loiConfig    = {};
+let charts       = {};
+let loadErrors   = [];
+let loadedDeals  = [];
+let selectedDeal = '';          // '' = all
+let selectedLocs = new Set();   // empty = all
 
-// --- Trend Chart ---
-let trendChart;
-let currentTrendView = 'collections';
-
-function computeTrendData() {
-  // For collections (adj), sum selected locations per month
-  if (currentTrendView === 'collections') {
-    return TREND_LABELS.map((_, i) => {
-      return [...selectedLocs].reduce((sum, loc) => sum + (locMonthlyAdj[loc]?.[i] || 0), 0);
-    });
-  }
-  // For other views, use aggregate monthlyData (not filterable by location in source)
-  const map = { charge:'charge', encounters:'enc', procedures:'procs' };
-  const key = map[currentTrendView];
-  return monthlyData.map(d => d[key]);
+/* ════════════════════════════════════════════════════════════
+   DATA FETCHING
+   ════════════════════════════════════════════════════════════ */
+function csvUrl(tab) {
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
 }
 
-function initTrendChart() {
-  const ctx = document.getElementById('trendChart').getContext('2d');
+async function fetchTab(deal) {
+  const res = await fetch(csvUrl(deal.tab));
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  if (text.trim().startsWith('<!') || text.includes('google.visualization')) {
+    throw new Error('Tab not found or sheet not public');
+  }
+  const { data } = Papa.parse(text, { header: true, skipEmptyLines: true });
+  const rows = data.map(r => normalizeRow(r, deal)).filter(
+    r => r && r.year && r.monthNum && (r.chargeAmount > 0 || r.adjCollections > 0)
+  );
+  return rows;
+}
 
-  const gradient = ctx.createLinearGradient(0, 0, 0, 280);
-  gradient.addColorStop(0, 'rgba(59,130,246,0.22)');
-  gradient.addColorStop(1, 'rgba(59,130,246,0)');
+function buildNormMap(row) {
+  const m = {};
+  for (const k of Object.keys(row)) m[k.trim().toLowerCase()] = k;
+  return m;
+}
 
-  trendChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: TREND_LABELS,
-      datasets: [{
-        label: 'Adj. Collections',
-        data: computeTrendData(),
-        borderColor: '#3b82f6',
-        backgroundColor: gradient,
-        borderWidth: 2,
-        fill: true,
-        tension: 0.35,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        pointBackgroundColor: '#3b82f6',
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const val = ctx.raw;
-              if (currentTrendView === 'collections' || currentTrendView === 'charge')
-                return ` $${val.toLocaleString()}`;
-              return ` ${val.toLocaleString()}`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color:'#718096', maxRotation:45, autoSkip:true, maxTicksLimit:18 }
-        },
-        y: {
-          grid: { color: '#f3f4f6' },
-          ticks: {
-            color: '#718096',
-            callback: (v) => {
-              if (currentTrendView === 'collections' || currentTrendView === 'charge')
-                return '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K');
-              return v.toLocaleString();
-            }
-          }
-        }
+function getCol(row, aliases, nm) {
+  for (const a of aliases) {
+    const orig = nm[a.trim().toLowerCase()];
+    if (orig !== undefined) {
+      const v = row[orig];
+      if (v !== undefined && v !== null && v !== '') return v;
+    }
+  }
+  return null;
+}
+
+function parseNum(v) {
+  if (v == null || v === '') return 0;
+  const n = parseFloat(String(v).replace(/[$,%\s]/g,'').replace(/,/g,''));
+  return isNaN(n) ? 0 : n;
+}
+
+function normalizeRow(raw, deal) {
+  try {
+    const nm = buildNormMap(raw);
+    const dateKey = nm['date'];
+    const dateStr = dateKey ? (raw[dateKey] || '') : '';
+    let dateObj = null, year = null, monthNum = null, month = null, week = null;
+
+    const pts = dateStr.split('/');
+    if (pts.length === 3) {
+      const [m, d, y] = pts.map(Number);
+      if (!isNaN(m) && !isNaN(d) && !isNaN(y) && y > 1900) {
+        dateObj = new Date(y, m-1, d);
+        year = y; monthNum = m; month = MO_FULL[m-1];
       }
     }
+    if (!year)     year     = parseInt(raw[nm['year']]  || '', 10) || null;
+    if (!month)    month    = (raw[nm['month']] || '').trim() || null;
+    if (!monthNum && month) monthNum = MO_FULL.indexOf(month) + 1 || null;
+    week = parseInt(raw[nm['week']] || '', 10) || null;
+
+    return {
+      deal:          deal.name,
+      location:      (raw[nm['location']] || '').trim(),
+      date:  dateObj, dateStr, year, monthNum, month, week,
+      chargeAmount:   parseNum(getCol(raw, COL_MAP.chargeAmount,   nm)),
+      adjCollections: parseNum(getCol(raw, COL_MAP.adjCollections, nm)),
+      procedures:     parseNum(getCol(raw, COL_MAP.procedures,     nm)),
+      encounters:     parseNum(getCol(raw, COL_MAP.encounters,     nm)),
+      granularity:    deal.granularity,
+    };
+  } catch { return null; }
+}
+
+async function loadAllData(onTabLoaded) {
+  allData = []; loadErrors = []; loadedDeals = [];
+  let settled = 0;
+  const total = DEALS.length;
+  const promises = DEALS.map((d, i) =>
+    fetchTab(d)
+      .then(rows => {
+        if (rows.length > 0) {
+          allData.push(...rows);
+          loadedDeals.push(d.name);
+        }
+      })
+      .catch(err => {
+        loadErrors.push({ deal: d.name, error: err.message });
+      })
+      .finally(() => {
+        settled++;
+        const det = document.getElementById('loadingDetail');
+        if (det) det.textContent = `Loading database… ${settled} / ${total} tabs`;
+        if (onTabLoaded) onTabLoaded(settled, total);
+      })
+  );
+  await Promise.allSettled(promises);
+}
+
+/* ════════════════════════════════════════════════════════════
+   CUSTOM DROPDOWN COMPONENTS
+   ════════════════════════════════════════════════════════════ */
+
+/* ─ Searchable single-select for Deal ─ */
+function toggleCsel(id) {
+  const el = document.getElementById(id);
+  const isOpen = el.classList.contains('open');
+  document.querySelectorAll('.csel.open,.msel.open').forEach(e => e.classList.remove('open'));
+  if (!isOpen) {
+    el.classList.add('open');
+    el.querySelector('.csel-search')?.focus();
+  }
+}
+function filterCselOpts(input, id) {
+  const q = input.value.toLowerCase();
+  document.querySelectorAll(`#${id} .csel-opt`).forEach(opt => {
+    opt.classList.toggle('hidden', q && !opt.textContent.toLowerCase().includes(q));
+  });
+}
+function selectCsel(id, value, label) {
+  selectedDeal = value;
+  document.getElementById(id + 'Label').textContent = label;
+  document.querySelectorAll(`#${id} .csel-opt`).forEach(o => o.classList.remove('selected'));
+  document.querySelector(`#${id} .csel-opt[data-value="${value}"]`)?.classList.add('selected');
+  document.getElementById(id).classList.remove('open');
+  // Reset location selection when deal changes
+  selectedLocs.clear();
+  rebuildLocationDropdown();
+  onFilterChange();
+}
+function buildDealDropdown() {
+  const deals = [...new Set(allData.map(r => r.deal))].sort();
+  const opts  = document.getElementById('dealCselOpts');
+  const existing = opts.querySelector('[data-value=""]');
+  opts.innerHTML = '';
+  opts.appendChild(existing);
+  deals.forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'csel-opt' + (d === selectedDeal ? ' selected' : '');
+    div.dataset.value = d;
+    div.textContent = d;
+    div.onclick = () => selectCsel('dealCsel', d, d);
+    opts.appendChild(div);
   });
 }
 
-function setTrendView(view, btn) {
-  currentTrendView = view;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const labels = { collections:'Adj. Collections', charge:'Charge Amount', encounters:'Encounters', procedures:'Procedures' };
-  trendChart.data.datasets[0].label = labels[view];
-  trendChart.data.datasets[0].data = computeTrendData();
-  trendChart.update();
+/* ─ Multi-select for Location ─ */
+function toggleMsel(id) {
+  const el = document.getElementById(id);
+  const isOpen = el.classList.contains('open');
+  document.querySelectorAll('.csel.open,.msel.open').forEach(e => e.classList.remove('open'));
+  if (!isOpen) el.classList.add('open');
+}
+function clearMsel(id) {
+  selectedLocs.clear();
+  document.querySelectorAll(`#${id}Opts .msel-opt`).forEach(o => o.classList.remove('checked'));
+  updateMselLabel();
+  onFilterChange();
+}
+function toggleMselOpt(loc) {
+  if (selectedLocs.has(loc)) selectedLocs.delete(loc);
+  else selectedLocs.add(loc);
+  const opt = document.querySelector(`#locationMselOpts [data-loc="${CSS.escape(loc)}"]`);
+  opt?.classList.toggle('checked', selectedLocs.has(loc));
+  updateMselLabel();
+  onFilterChange();
+}
+function updateMselLabel() {
+  const lbl = document.getElementById('locationMselLabel');
+  if (selectedLocs.size === 0) lbl.innerHTML = 'All Locations';
+  else lbl.innerHTML = `<span class="msel-badge">${selectedLocs.size}</span> ${selectedLocs.size === 1 ? [...selectedLocs][0] : 'locations selected'}`;
+}
+function rebuildLocationDropdown() {
+  const pool = selectedDeal ? allData.filter(r => r.deal === selectedDeal) : allData;
+  // Group by deal for display
+  const byDeal = {};
+  pool.forEach(r => {
+    if (!r.location) return;
+    if (!byDeal[r.deal]) byDeal[r.deal] = new Set();
+    byDeal[r.deal].add(r.location);
+  });
+  const container = document.getElementById('locationMselOpts');
+  container.innerHTML = '';
+  const deals = Object.keys(byDeal).sort();
+  deals.forEach(deal => {
+    if (deals.length > 1) {
+      const grp = document.createElement('div');
+      grp.className = 'msel-deal-group';
+      grp.textContent = deal;
+      container.appendChild(grp);
+    }
+    [...byDeal[deal]].sort().forEach(loc => {
+      const div = document.createElement('div');
+      div.className = 'msel-opt' + (selectedLocs.has(loc) ? ' checked' : '');
+      div.dataset.loc = loc;
+      div.innerHTML = `<span class="msel-cb"></span>${loc}`;
+      div.onclick = () => toggleMselOpt(loc);
+      container.appendChild(div);
+    });
+  });
+  updateMselLabel();
 }
 
-// --- Location dropdown ---
-function toggleLocDropdown() {
-  const btn = document.getElementById('locFilterBtn');
-  const dd = document.getElementById('locDropdown');
-  btn.classList.toggle('open');
-  dd.classList.toggle('open');
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', (e) => {
-  if (!document.getElementById('locFilterWrap').contains(e.target)) {
-    document.getElementById('locFilterBtn').classList.remove('open');
-    document.getElementById('locDropdown').classList.remove('open');
+/* Close dropdowns when clicking outside */
+document.addEventListener('click', e => {
+  if (!e.target.closest('.csel') && !e.target.closest('.msel')) {
+    document.querySelectorAll('.csel.open,.msel.open').forEach(el => el.classList.remove('open'));
   }
 });
 
-function toggleLoc(loc) {
-  // Prevent checkbox default — we handle it here
-  const chk = document.getElementById('chk-' + loc);
-  // The label onclick fires before checkbox change, so toggle manually
-  setTimeout(() => {
-    if (chk.checked) selectedLocs.add(loc);
-    else selectedLocs.delete(loc);
-    updateTrendFromFilter();
-  }, 0);
+/* ════════════════════════════════════════════════════════════
+   FILTERS & STATE
+   ════════════════════════════════════════════════════════════ */
+function getFilters() {
+  return {
+    deal:  selectedDeal,
+    locs:  selectedLocs,
+    start: document.getElementById('filterStart').value,
+    end:   document.getElementById('filterEnd').value,
+  };
 }
 
-function toggleAllLocations() {
-  const allSelected = selectedLocs.size === ALL_LOCS.length;
-  if (allSelected) {
-    selectedLocs.clear();
-    ALL_LOCS.forEach(loc => { document.getElementById('chk-' + loc).checked = false; });
-    document.getElementById('toggleAllBtn').textContent = 'Select All';
-  } else {
-    ALL_LOCS.forEach(loc => {
-      selectedLocs.add(loc);
-      document.getElementById('chk-' + loc).checked = true;
-    });
-    document.getElementById('toggleAllBtn').textContent = 'Deselect All';
+function onFilterChange() {
+  const f = getFilters();
+  filteredData = allData.filter(r => {
+    if (f.deal && r.deal !== f.deal) return false;
+    if (f.locs.size > 0 && !f.locs.has(r.location)) return false;
+    if (f.start && r.date && r.date < new Date(f.start + 'T00:00:00')) return false;
+    if (f.end   && r.date && r.date > new Date(f.end   + 'T23:59:59')) return false;
+    return true;
+  });
+  document.getElementById('recordCount').textContent =
+    `${filteredData.length.toLocaleString()} records`;
+  renderDashboard();
+}
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('btnMonthly').classList.toggle('active', v === 'monthly');
+  document.getElementById('btnWeekly').classList.toggle('active', v === 'weekly');
+  const lbl = v === 'monthly' ? 'Monthly' : 'Weekly';
+  document.getElementById('trendLabel').textContent     = lbl + ' Trend';
+  document.getElementById('mainChartTitle').textContent = lbl + ' Adjusted Collections';
+  document.getElementById('mainChartSub').textContent   = `Bars = Adj. Collections · Line = Charge Amount — aggregated by ${v.toLowerCase()} period`;
+  document.getElementById('perfTableSectionLabel').textContent = lbl + ' Performance Detail';
+  document.getElementById('perfTableTitle').textContent = lbl + ' Summary';
+  const locSub = document.getElementById('locTableSub');
+  if (locSub) locSub.textContent = `Sorted by Adj. Collections · ${lbl.toLowerCase()} view · filtered period`;
+  renderDashboard();
+}
+
+/* ════════════════════════════════════════════════════════════
+   TAB NAVIGATION
+   ════════════════════════════════════════════════════════════ */
+function switchTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id)?.classList.add('active');
+  document.querySelector(`[data-tab="${id}"]`)?.classList.add('active');
+  // Disable Monthly/Weekly toggle on YoY tab — YoY is always monthly
+  const isYoy = id === 'yoy';
+  const tg = document.querySelector('.toggle-group');
+  if (tg) {
+    tg.style.opacity = isYoy ? '0.35' : '1';
+    tg.style.pointerEvents = isYoy ? 'none' : '';
+    tg.title = isYoy ? 'YoY Analysis always uses monthly data' : '';
   }
-  updateTrendFromFilter();
+  // Trigger chart resize after tab switch (Chart.js needs this on hidden canvases)
+  setTimeout(() => Object.values(charts).forEach(c => c?.resize?.()), 50);
 }
 
-function updateTrendFromFilter() {
-  // Update button label
-  const n = selectedLocs.size;
-  const label = n === 0 ? 'None selected' : n === ALL_LOCS.length ? 'All Locations' : `${n} Location${n > 1 ? 's' : ''}`;
-  document.getElementById('locFilterLabel').textContent = label;
-
-  // Update subtitle
-  const sub = n === ALL_LOCS.length ? 'Jan 2024 – Jun 2026 · All Locations Combined'
-    : n === 0 ? 'Jan 2024 – Jun 2026 · No locations selected'
-    : 'Jan 2024 – Jun 2026 · ' + [...selectedLocs].join(', ');
-  document.getElementById('trendSubtitle').textContent = sub;
-
-  // Update toggle all button text
-  document.getElementById('toggleAllBtn').textContent = n === ALL_LOCS.length ? 'Deselect All' : 'Select All';
-
-  // Recompute and update chart
-  trendChart.data.datasets[0].data = computeTrendData();
-  trendChart.update();
+/* ════════════════════════════════════════════════════════════
+   AGGREGATION
+   ════════════════════════════════════════════════════════════ */
+function aggregateMonthly(data) {
+  const map = {};
+  data.forEach(r => {
+    if (!r.year || !r.monthNum) return;
+    const k = `${r.year}-${String(r.monthNum).padStart(2,'0')}`;
+    if (!map[k]) map[k] = {
+      key: k, year: r.year, monthNum: r.monthNum, month: r.month,
+      label: `${MO_SHORT[r.monthNum-1]} ${r.year}`,
+      chargeAmount: 0, adjCollections: 0, procedures: 0, encounters: 0,
+      daySet: new Set(), locSet: new Set(),
+    };
+    const m = map[k];
+    m.chargeAmount   += r.chargeAmount;
+    m.adjCollections += r.adjCollections;
+    m.procedures     += r.procedures;
+    m.encounters     += r.encounters;
+    if (r.date)     m.daySet.add(r.date.toDateString());
+    if (r.location) m.locSet.add(r.location);
+  });
+  return Object.values(map).sort((a,b) => a.key.localeCompare(b.key)).map(m => ({
+    ...m, days: m.daySet.size, locations: m.locSet.size,
+    collRate: m.chargeAmount > 0 ? m.adjCollections / m.chargeAmount : null,
+  }));
 }
 
-// --- YoY Chart ---
-function initYoYChart() {
-  const ctx = document.getElementById('yoyChart').getContext('2d');
+function aggregateWeekly(data) {
+  const map = {};
+  data.forEach(r => {
+    if (!r.year || !r.week) return;
+    const k = `${r.year}-${String(r.week).padStart(2,'0')}`;
+    if (!map[k]) map[k] = {
+      key: k, year: r.year, week: r.week,
+      label: `W${r.week} ${r.year}`,
+      chargeAmount: 0, adjCollections: 0, procedures: 0, encounters: 0,
+      daySet: new Set(), locSet: new Set(),
+    };
+    const w = map[k];
+    w.chargeAmount   += r.chargeAmount;
+    w.adjCollections += r.adjCollections;
+    w.procedures     += r.procedures;
+    w.encounters     += r.encounters;
+    if (r.date)     w.daySet.add(r.date.toDateString());
+    if (r.location) w.locSet.add(r.location);
+  });
+  return Object.values(map).sort((a,b) => a.key.localeCompare(b.key)).map(w => ({
+    ...w, days: w.daySet.size, locations: w.locSet.size,
+    collRate: w.chargeAmount > 0 ? w.adjCollections / w.chargeAmount : null,
+  }));
+}
 
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const y24 = monthlyData.filter(d=>d.y===2024).map(d=>d.adj);
-  const y25 = monthlyData.filter(d=>d.y===2025).map(d=>d.adj);
-  const y26 = monthlyData.filter(d=>d.y===2026).map(d=>d.adj);
+/* ════════════════════════════════════════════════════════════
+   TTM & YOY
+   ════════════════════════════════════════════════════════════ */
+function calcTTM(monthly) {
+  if (!monthly.length) return null;
+  const sorted = [...monthly].sort((a,b) => a.key.localeCompare(b.key));
+  const endIdx = sorted.length - 1;
+  const startIdx = Math.max(0, endIdx - 11);
+  const window = sorted.slice(startIdx, endIdx + 1);
+  return {
+    amount: window.reduce((s,m) => s + m.adjCollections, 0),
+    months: window.length,
+    isPartial: window.length < 12,
+    startLabel: window[0].label,
+    endLabel:   window[window.length-1].label,
+    periodLabel:`${window[0].label} – ${window[window.length-1].label}`,
+  };
+}
 
-  new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: months,
-      datasets: [
-        { label:'2024', data:y24, backgroundColor:'rgba(148,163,184,0.6)', borderColor:'#94a3b8', borderWidth:1, borderRadius:3 },
-        { label:'2025', data:y25, backgroundColor:'rgba(59,130,246,0.5)',  borderColor:'#3b82f6',  borderWidth:1, borderRadius:3 },
-        { label:'2026', data:y26, backgroundColor:'rgba(16,185,129,0.6)', borderColor:'#10b981', borderWidth:1, borderRadius:3 },
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => ` ${ctx.dataset.label}: $${ctx.raw.toLocaleString()}`
-          }
-        }
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { color:'#718096' } },
-        y: {
-          grid: { color:'#f0f4f8' },
-          ticks: {
-            color:'#718096',
-            callback: v => '$' + (v>=1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K')
-          }
-        }
-      }
-    }
+function calcRollingTTM(monthly) {
+  const sorted = [...monthly].sort((a,b) => a.key.localeCompare(b.key));
+  const out = [];
+  for (let i = 11; i < sorted.length; i++) {
+    const w = sorted.slice(i-11, i+1);
+    out.push({ label: sorted[i].label, key: sorted[i].key, amount: w.reduce((s,m) => s + m.adjCollections, 0) });
+  }
+  return out;
+}
+
+function calcYoY(monthly, n = 5) {
+  const sorted = [...monthly].sort((a,b) => b.key.localeCompare(a.key));
+  return sorted.slice(0, n).reverse().map(curr => {
+    const prevKey = `${curr.year-1}-${String(curr.monthNum).padStart(2,'0')}`;
+    const prev    = monthly.find(m => m.key === prevKey);
+    const change  = prev ? curr.adjCollections - prev.adjCollections : null;
+    const pctChg  = prev && prev.adjCollections > 0 ? change / prev.adjCollections : null;
+    return { key: curr.key, month: `${MO_SHORT[curr.monthNum-1]} ${curr.year}`, current: curr.adjCollections, prior: prev?.adjCollections ?? null, change, pctChg };
   });
 }
 
-// --- Location Chart ---
-function initLocationChart() {
-  const ctx = document.getElementById('locationChart').getContext('2d');
-  new Chart(ctx, {
-    type: 'doughnut',
+function calcYoYFull(monthly) {
+  const sorted = [...monthly].sort((a,b) => b.key.localeCompare(a.key));
+  return sorted.map(curr => {
+    const prevKey = `${curr.year-1}-${String(curr.monthNum).padStart(2,'0')}`;
+    const prev    = monthly.find(m => m.key === prevKey);
+    if (!prev) return null;
+    const change = curr.adjCollections - prev.adjCollections;
+    const pctChg = prev.adjCollections > 0 ? change / prev.adjCollections : null;
+    return { key: curr.key, month: `${MO_SHORT[curr.monthNum-1]} ${curr.year}`, current: curr.adjCollections, prior: prev.adjCollections, change, pctChg };
+  }).filter(Boolean);
+}
+
+function isCurrentMonthKey(key) {
+  if (!key) return false;
+  const now = new Date();
+  return key === `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+}
+
+/* ════════════════════════════════════════════════════════════
+   LOI CONFIG
+   ════════════════════════════════════════════════════════════ */
+const LOI_KEY = 'sp_dental_loi_v2';
+function loadLOI() {
+  try { loiConfig = JSON.parse(localStorage.getItem(LOI_KEY) || '{}'); } catch { loiConfig = {}; }
+}
+
+/* ── Auto-fetch LOI values from the "Summary" sheet tab ─────────────── */
+async function fetchSummaryLOI() {
+  try {
+    const url = csvUrl('Summary');
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const text = await res.text();
+    if (text.trim().startsWith('<!') || text.includes('google.visualization')) return;
+
+    const { data } = Papa.parse(text, { header: false, skipEmptyLines: false });
+
+    // Locate the header row (the one containing "LOI" or "loi period" / "loi revenue")
+    let headerIdx = -1;
+    let colDeal = -1, colLOIRev = -1, colLOIPeriod = -1, colQoERev = -1, colQoEPeriod = -1, colCurRev = -1;
+    for (let i = 0; i < Math.min(data.length, 15); i++) {
+      const row = (data[i] || []).map(c => (c || '').toLowerCase().trim());
+      const hasLOI = row.some(c => c.includes('loi'));
+      if (hasLOI) {
+        headerIdx = i;
+        colDeal      = row.findIndex(c => c.includes('client') || c.includes('deal'));
+        if (colDeal === -1) colDeal = row.findIndex(c => c.length > 1 && !c.includes('loi') && !c.includes('qoe') && !c.includes('revenue') && !c.includes('var') && i === 0 ? false : c.length > 0);
+        colLOIPeriod = row.findIndex(c => c.includes('loi') && c.includes('period'));
+        colLOIRev    = row.findIndex(c => c.includes('loi') && (c.includes('revenue') || c.includes('rev') || c.includes('adj')));
+        if (colLOIRev === -1) colLOIRev = row.findIndex(c => c.includes('loi') && !c.includes('period'));
+        colQoEPeriod = row.findIndex(c => c.includes('qoe') && c.includes('period'));
+        colQoERev    = row.findIndex(c => c.includes('qoe') && (c.includes('revenue') || c.includes('rev') || c.includes('adj')));
+        if (colQoERev === -1) colQoERev = row.findIndex(c => c.includes('qoe') && !c.includes('period'));
+        colCurRev    = row.findIndex(c => c.includes('current') && (c.includes('rev') || c.includes('revenue')));
+        // Fallback: after LOI Period, the next column is LOI Revenue
+        if (colLOIRev === -1 && colLOIPeriod >= 0) colLOIRev = colLOIPeriod + 1;
+        break;
+      }
+    }
+    if (headerIdx === -1 || (colLOIRev === -1 && colLOIPeriod === -1)) {
+      console.warn('[Dashboard] Summary tab: could not detect LOI columns');
+      return;
+    }
+
+    // Build fuzzy deal matcher
+    function fuzzyMatch(rawName) {
+      const clean = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      for (const deal of DEALS) {
+        const d = deal.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (clean === d || clean.includes(d) || d.includes(clean)) return deal.name;
+        // word-level: any word in deal name in rawName
+        const words = deal.name.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+        if (words.some(w => clean.includes(w.replace(/[^a-z0-9]/g,'')))) return deal.name;
+      }
+      return null;
+    }
+
+    let changed = false;
+    const sheetLOI = {};   // keyed by deal name → { loi, loiPeriod, qoe, qoePeriod, current }
+    for (let i = headerIdx + 1; i < data.length; i++) {
+      const row = data[i] || [];
+      // Find the deal name — try colDeal first, else scan for any non-empty non-numeric
+      let rawName = (colDeal >= 0 ? row[colDeal] : '') || '';
+      if (!rawName.trim()) {
+        // scan the row for a plausible deal name (non-empty, starts with letter)
+        for (let c = 0; c < Math.min(row.length, 4); c++) {
+          const v = (row[c] || '').trim();
+          if (v && /^[a-zA-Z]/.test(v) && isNaN(parseNum(v))) { rawName = v; break; }
+        }
+      }
+      rawName = rawName.trim();
+      if (!rawName) continue;
+
+      const dealName = fuzzyMatch(rawName);
+      if (!dealName) continue;
+
+      const loiRevRaw = colLOIRev >= 0 ? (row[colLOIRev] || '') : '';
+      const loiRev    = parseNum(loiRevRaw);
+      const loiPer    = colLOIPeriod >= 0 ? (row[colLOIPeriod] || '').trim() : '';
+      const qoeRev    = colQoERev >= 0 ? parseNum(row[colQoERev] || '') : null;
+      const qoePer    = colQoEPeriod >= 0 ? (row[colQoEPeriod] || '').trim() : '';
+      const curRev    = colCurRev >= 0 ? parseNum(row[colCurRev] || '') : null;
+
+      if (loiRev > 0) {
+        sheetLOI[dealName] = { loi: loiRev, loiPeriod: loiPer, qoe: qoeRev, qoePeriod: qoePer, current: curRev };
+        if (loiConfig[dealName] !== loiRev) { loiConfig[dealName] = loiRev; changed = true; }
+      }
+    }
+
+    if (Object.keys(sheetLOI).length) {
+      window._sheetLOI = sheetLOI;   // store for display in LOI Config tab
+      if (changed) {
+        try { localStorage.setItem(LOI_KEY, JSON.stringify(loiConfig)); } catch {}
+        console.log('[Dashboard] LOI values loaded from Summary tab:', sheetLOI);
+      }
+    } else {
+      console.warn('[Dashboard] Summary tab parsed but no LOI values found');
+    }
+  } catch(e) {
+    console.warn('[Dashboard] fetchSummaryLOI error:', e.message);
+  }
+}
+function saveLOI() {
+  DEALS.forEach(d => {
+    const el = document.getElementById('loiInp_' + d.name.replace(/\W/g,'_'));
+    if (!el) return;
+    const v = parseNum(el.value);
+    loiConfig[d.name] = v > 0 ? v : null;
+  });
+  try { localStorage.setItem(LOI_KEY, JSON.stringify(loiConfig)); } catch {}
+  renderDashboard();
+  showToast('LOI values saved.');
+}
+function buildLoiGrid() {
+  const grid = document.getElementById('loiGrid');
+  grid.innerHTML = DEALS.map(d => {
+    const id  = 'loiInp_' + d.name.replace(/\W/g,'_');
+    const val = loiConfig[d.name];
+    const loaded = loadedDeals.includes(d.name);
+    const sheetSrc = window._sheetLOI && window._sheetLOI[d.name];
+    const sheetBadge = sheetSrc
+      ? `<span style="color:var(--accent);font-size:9px;font-weight:700;margin-left:4px">● from sheet${sheetSrc.loiPeriod ? ' · ' + sheetSrc.loiPeriod : ''}</span>`
+      : '';
+    return `<div class="loi-item">
+      <div class="loi-deal">${d.name}
+        ${loaded ? '<span style="color:var(--green);font-size:9px">● data loaded</span>' : '<span style="color:var(--text4);font-size:9px">● no data</span>'}
+        ${sheetBadge}
+      </div>
+      <div class="loi-row">
+        <span class="loi-curr">$</span>
+        <input type="text" id="${id}" class="loi-inp"
+               value="${val ? numFmt(val) : ''}" placeholder="e.g. 2,500,000">
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════
+   FORMATTING
+   ════════════════════════════════════════════════════════════ */
+function fmtM(n, compact = false) {
+  if (n == null || isNaN(n)) return '—';
+  if (compact) {
+    if (Math.abs(n) >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+    if (Math.abs(n) >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
+    return '$' + Math.round(n);
+  }
+  return '$' + Math.round(n).toLocaleString();
+}
+function fmtPct(n, sign = false) {
+  if (n == null || isNaN(n)) return '—';
+  return (sign && n > 0 ? '+' : '') + (n*100).toFixed(1) + '%';
+}
+function numFmt(n) { return Math.round(n).toLocaleString(); }
+function fmtK(n)   { return n ? numFmt(Math.round(n)) : '—'; }
+
+/* ════════════════════════════════════════════════════════════
+   CHART HELPERS
+   ════════════════════════════════════════════════════════════ */
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+/* Chart.js global defaults for light theme */
+Chart.defaults.color = '#6B7280';
+Chart.defaults.borderColor = '#E5E7EB';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+Chart.defaults.font.size = 11;
+
+const TOOLTIP = {
+  backgroundColor: '#1B3564',
+  borderColor: '#1B3564',
+  borderWidth: 0,
+  titleColor: '#FFFFFF',
+  bodyColor: 'rgba(255,255,255,0.8)',
+  padding: 10,
+  cornerRadius: 6,
+};
+const SCALE_Y_DOLLAR = {
+  ticks: { color: '#9CA3AF', font: { size: 10 }, callback: v => fmtM(v, true) },
+  grid:  { color: '#F3F4F6' },
+};
+const SCALE_X = {
+  ticks: { color: '#9CA3AF', font: { size: 10 }, maxRotation: 45 },
+  grid:  { display: false },
+};
+
+/* ════════════════════════════════════════════════════════════
+   CHART RENDERERS
+   ════════════════════════════════════════════════════════════ */
+function renderTTMTrend(canvasId, rolling, loiTotal) {
+  destroyChart(canvasId);
+  if (!rolling.length) return;
+  const datasets = [{
+    label: 'Rolling TTM Adj. Collections',
+    data: rolling.map(r => r.amount),
+    borderColor: '#1B6E45', backgroundColor: 'rgba(27,110,69,0.07)',
+    borderWidth: 2.5, pointRadius: 3, fill: true, tension: 0.35,
+  }];
+  if (loiTotal) datasets.push({
+    label: 'LOI Target', data: rolling.map(() => loiTotal),
+    borderColor: '#1B3564', borderDash: [7,4], borderWidth: 1.5,
+    pointRadius: 0, fill: false,
+  });
+  charts[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'line', data: { labels: rolling.map(r => r.label), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+      plugins: { legend: { labels: { boxWidth: 12, padding: 12 } }, tooltip: TOOLTIP },
+      scales: { x: { ...SCALE_X, ticks: { ...SCALE_X.ticks, maxTicksLimit: 12 } }, y: SCALE_Y_DOLLAR },
+    },
+  });
+}
+
+function renderMainChart(data) {
+  destroyChart('main');
+  const d = data.slice(-30);
+  if (!d.length) return;
+  charts.main = new Chart(document.getElementById('mainChart'), {
+    type: 'bar',
     data: {
-      labels: locationData.map(d=>d.name),
-      datasets: [{
-        data: locationData.map(d=>d.total),
-        backgroundColor: PALETTE,
-        borderColor: '#ffffff',
-        borderWidth: 3,
-        hoverOffset: 8,
-      }]
+      labels: d.map(x => x.label),
+      datasets: [
+        { label: 'Adj. Collections', data: d.map(x => x.adjCollections), backgroundColor: 'rgba(27,110,69,0.75)', borderColor: '#1B6E45', borderWidth: 1, order: 2 },
+        { type: 'line', label: 'Charge Amount', data: d.map(x => x.chargeAmount), borderColor: '#1B3564', borderWidth: 2, backgroundColor: 'transparent', pointRadius: 3, tension: 0.3, order: 1 },
+      ],
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+      plugins: { legend: { labels: { boxWidth: 12, padding: 12 } }, tooltip: { ...TOOLTIP, callbacks: { label: c => ' ' + fmtM(c.raw) } } },
+      scales: { x: SCALE_X, y: SCALE_Y_DOLLAR },
+    },
+  });
+}
+
+function renderCollRate(data) {
+  destroyChart('collRate');
+  const d = data.filter(x => x.collRate != null).slice(-24);
+  if (!d.length) return;
+  charts.collRate = new Chart(document.getElementById('collRateChart'), {
+    type: 'line',
+    data: {
+      labels: d.map(x => x.label),
+      datasets: [{ label: 'Collection Rate', data: d.map(x => +(x.collRate*100).toFixed(2)), borderColor: '#B45309', backgroundColor: 'rgba(180,83,9,0.07)', borderWidth: 2.5, fill: true, tension: 0.35, pointRadius: 3 }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+      plugins: { tooltip: { ...TOOLTIP, callbacks: { label: c => ' ' + c.raw + '%' } } },
+      scales: {
+        x: SCALE_X,
+        y: { ticks: { color: '#9CA3AF', font: { size: 10 }, callback: v => v + '%' }, grid: { color: '#F3F4F6' } },
+      },
+    },
+  });
+}
+
+function renderYoYChart(yoy) {
+  destroyChart('yoy');
+  const d = yoy.filter(r => r.prior != null);
+  if (!d.length) return;
+  charts.yoy = new Chart(document.getElementById('yoyChart'), {
+    type: 'bar',
+    data: {
+      labels: d.map(r => r.month + (isCurrentMonthKey(r.key) ? ' *' : '')),
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Current Year',
+          data: d.map(r => r.current),
+          backgroundColor: 'rgba(27,110,69,0.72)',
+          borderColor: '#1B6E45', borderWidth: 1,
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: 'Prior Year',
+          data: d.map(r => r.prior),
+          borderColor: '#1B3564', borderWidth: 2.5,
+          backgroundColor: 'transparent',
+          pointRadius: 5, pointBackgroundColor: '#fff',
+          pointBorderColor: '#1B3564', pointBorderWidth: 2,
+          tension: 0.2, order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
       plugins: {
-        legend: {
-          position: 'right',
-          labels: {
-            boxWidth: 12,
-            padding: 10,
-            generateLabels(chart) {
-              const ds = chart.data.datasets[0];
-              const total = ds.data.reduce((a,b)=>a+b,0);
-              return chart.data.labels.map((label,i) => ({
-                text: `${label}  ${((ds.data[i]/total)*100).toFixed(1)}%`,
-                fillStyle: PALETTE[i],
-                strokeStyle: '#fff',
-                lineWidth: 1,
-                index: i
-              }));
+        legend: { labels: { boxWidth: 12, padding: 12 } },
+        tooltip: {
+          ...TOOLTIP,
+          callbacks: {
+            label: c => ' ' + fmtM(c.raw),
+            afterBody: items => {
+              const i = items[0]?.dataIndex;
+              if (i == null) return [];
+              const r = d[i];
+              const parts = [];
+              if (r.pctChg != null) parts.push(`YoY: ${r.pctChg>=0?'+':''}${(r.pctChg*100).toFixed(1)}%`);
+              if (isCurrentMonthKey(r.key)) parts.push('* Partial month — in progress');
+              return parts;
             }
           }
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => ` $${ctx.raw.toLocaleString()}`
-          }
         }
       },
-      cutout: '62%',
-    }
-  });
-}
-
-// --- Stacked Location Chart ---
-function initStackedChart() {
-  const ctx = document.getElementById('stackedChart').getContext('2d');
-  const locs = Object.keys(loc2026).filter(k=>k!=='labels');
-  new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: loc2026.labels,
-      datasets: locs.map((loc,i) => ({
-        label: loc,
-        data: loc2026[loc],
-        backgroundColor: PALETTE[i],
-        borderRadius: i === locs.length-1 ? { topLeft:4, topRight:4 } : 0,
-        stack: 'stack',
-      }))
+      scales: { x: { ...SCALE_X, ticks: { ...SCALE_X.ticks, maxRotation: 0 } }, y: SCALE_Y_DOLLAR },
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode:'index', intersect:false },
-      plugins: {
-        legend: { position:'top', labels:{ boxWidth:12, padding:16 } },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => ` ${ctx.dataset.label}: $${ctx.raw.toLocaleString()}`
-          }
-        }
-      },
-      scales: {
-        x: { stacked:true, grid:{display:false}, ticks:{color:'#718096'} },
-        y: {
-          stacked:true,
-          grid:{color:'#f0f4f8'},
-          ticks:{
-            color:'#718096',
-            callback: v => '$'+(v>=1e6?(v/1e6).toFixed(1)+'M':(v/1e3).toFixed(0)+'K')
-          }
-        }
-      }
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   RENDERERS
+   ════════════════════════════════════════════════════════════ */
+const set   = (id, v)       => { const e = document.getElementById(id); if (e) e.textContent = v; };
+const setH  = (id, h)       => { const e = document.getElementById(id); if (e) e.innerHTML   = h; };
+const setS  = (id, p, v)    => { const e = document.getElementById(id); if (e) e.style[p]    = v; };
+
+function renderKPIs(monthly) {
+  const d = filteredData;
+  const tC   = d.reduce((s,r) => s + r.chargeAmount,   0);
+  const tAdj = d.reduce((s,r) => s + r.adjCollections, 0);
+  const tPrc = d.reduce((s,r) => s + r.procedures,     0);
+  const tEnc = d.reduce((s,r) => s + r.encounters,     0);
+  const days = new Set(d.filter(r=>r.date).map(r=>r.date.toDateString())).size;
+  const locs = [...new Set(d.map(r=>r.location).filter(Boolean))];
+  const ttm  = calcTTM(monthly);
+  const dates = d.filter(r=>r.date).map(r=>r.date.getTime());
+  const latest = dates.length ? new Date(Math.max(...dates)) : null;
+
+  set('kpiTTM',        ttm ? fmtM(ttm.amount, true) : '—');
+  set('kpiTTMPeriod',  ttm ? ttm.periodLabel + (ttm.isPartial ? ` (${ttm.months}mo)` : '') : 'Insufficient data');
+  set('kpiCharge',     fmtM(tC, true));
+  set('kpiCollections',fmtM(tAdj, true));
+  set('kpiCollRate',   fmtPct(tC > 0 ? tAdj/tC : null));
+  set('kpiAvgDaily',   fmtM(days > 0 ? tC/days : null, true));
+  set('kpiAvgDailySub',`Across ${days} working days`);
+  set('kpiEncounters', tEnc ? numFmt(tEnc) : '—');
+  set('kpiProcedures', tPrc ? numFmt(tPrc) : '—');
+  set('kpiLocations',  locs.length);
+  set('kpiLocationsSub', locs.length ? locs.slice(0,4).join(', ') + (locs.length>4 ? ` +${locs.length-4} more` : '') : 'None');
+  set('kpiLatestDate', latest ? latest.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—');
+}
+
+function renderTTMvsLOI(monthly) {
+  const ttm = calcTTM(monthly);
+  set('cmpTTM',      ttm ? fmtM(ttm.amount, true) : '—');
+  set('cmpTTMPeriod',ttm ? ttm.periodLabel + (ttm.isPartial ? ` (${ttm.months}mo only)` : '') : 'Insufficient data');
+
+  const f = getFilters();
+  const inScope = f.deal ? [f.deal] : [...new Set(filteredData.map(r=>r.deal))];
+  const configured = inScope.filter(d => loiConfig[d] > 0);
+  const loiTotal = configured.length ? configured.reduce((s,d) => s + loiConfig[d], 0) : null;
+
+  const loiEl = document.getElementById('cmpLOI');
+  if (loiEl) {
+    if (loiTotal) {
+      loiEl.textContent = fmtM(loiTotal, true);
+      loiEl.classList.remove('unset');
+    } else {
+      loiEl.textContent = 'Not set — configure in LOI Config tab';
+      loiEl.classList.add('unset');
     }
-  });
+  }
+
+  if (ttm && loiTotal) {
+    const vD = ttm.amount - loiTotal, vP = vD / loiTotal;
+    const col = vD >= 0 ? 'var(--green)' : 'var(--red)';
+    set('cmpVarD',    (vD >= 0 ? '+' : '') + fmtM(vD, true));
+    set('cmpVarDSub', 'vs. LOI baseline');
+    set('cmpVarP',    fmtPct(vP, true));
+    setS('cmpVarD','color',col); setS('cmpVarP','color',col);
+  } else {
+    set('cmpVarD','—'); set('cmpVarDSub','Set LOI values to enable'); set('cmpVarP','—');
+    setS('cmpVarD','color',''); setS('cmpVarP','color','');
+  }
+
+  const rolling = calcRollingTTM(monthly);
+  renderTTMTrend('ttmTrendChart',  rolling, loiTotal);
+  renderTTMTrend('ttmTrendChart2', rolling, loiTotal);
 }
 
-// --- Monthly Table ---
-function buildTable() {
-  const tbody = document.getElementById('monthlyTableBody');
-  const recent = monthlyData.filter(d => d.y >= 2025).reverse();
+function renderYoY(monthly) {
+  const yoy5    = calcYoY(monthly, 5);
+  const yoyFull = calcYoYFull(monthly);
+  renderYoYChart(yoy5);
 
-  recent.forEach(d => {
-    const pct = ((d.adj / d.charge) * 100).toFixed(1);
-    const ppo = (d.procs / d.enc).toFixed(1);
-    const label = `${d.m} ${d.y}`;
-    const isPartial = d.partial;
+  // helper: render a % badge
+  function yoyPctBadge(pct) {
+    if (pct == null) return '<span style="color:var(--text3)">—</span>';
+    const cls = pct >= 0 ? 'pos' : 'neg';
+    return `<span class="yoy-badge ${cls}">${pct>=0?'↑':'↓'} ${pct>=0?'+':''}${(pct*100).toFixed(1)}%</span>`;
+  }
+  function yoyMonthLabel(r) {
+    return r.month + (isCurrentMonthKey(r.key) ? '<span class="partial-tag">partial</span>' : '');
+  }
 
-    tbody.innerHTML += `
-      <tr>
-        <td>
-          <strong>${label}</strong>
-          ${isPartial ? '<span class="badge badge-amber" style="margin-left:6px">Partial</span>' : ''}
-        </td>
-        <td class="num" style="font-weight:600; color:#1d4ed8">$${Math.round(d.adj).toLocaleString()}</td>
-        <td class="num">$${Math.round(d.charge).toLocaleString()}</td>
-        <td class="num">${pct}%</td>
-        <td class="num">${d.procs.toLocaleString()}</td>
-        <td class="num">${d.enc.toLocaleString()}</td>
-        <td class="num">${ppo}</td>
-      </tr>
-    `;
-  });
+  // 5-month table
+  const tb5 = document.getElementById('yoyTableBody');
+  if (!yoy5.length) {
+    tb5.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px;">No data</td></tr>';
+  } else {
+    tb5.innerHTML = yoy5.map(r => `<tr>
+      <td class="l bold">${yoyMonthLabel(r)}</td>
+      <td>${fmtM(r.current, true)}</td>
+      <td>${r.prior != null ? fmtM(r.prior, true) : '<span style="color:var(--text3)">—</span>'}</td>
+      <td class="${r.change == null ? '' : r.change >= 0 ? 'pos' : 'neg'}" style="font-weight:600">${r.change != null ? (r.change>=0?'↑ +':'↓ ')+fmtM(r.change,true) : '—'}</td>
+      <td>${yoyPctBadge(r.pctChg)}</td>
+    </tr>`).join('');
+  }
+
+  // Full history table
+  const tbH = document.getElementById('yoyHistBody');
+  set('yoyHistMeta', `${yoyFull.length} months with prior-year data`);
+  if (!yoyFull.length) {
+    tbH.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px;">Insufficient data for YoY comparison</td></tr>';
+  } else {
+    tbH.innerHTML = yoyFull.map(r => `<tr>
+      <td class="l bold">${yoyMonthLabel(r)}</td>
+      <td>${fmtM(r.current, true)}</td>
+      <td>${fmtM(r.prior, true)}</td>
+      <td class="${r.change >= 0 ? 'pos' : 'neg'}" style="font-weight:600">${(r.change>=0?'↑ +':'↓ ')+fmtM(r.change,true)}</td>
+      <td>${yoyPctBadge(r.pctChg)}</td>
+    </tr>`).join('');
+  }
 }
 
-// Init
-initTrendChart();
-initYoYChart();
-initLocationChart();
-initStackedChart();
-buildTable();
+/* Track expanded years globally so state persists across renders */
+const _expandedYears = new Set();
+function toggleYear(year) {
+  const rows   = document.querySelectorAll(`.mrow-${year}`);
+  const arrow  = document.getElementById(`yarrow-${year}`);
+  const isOpen = _expandedYears.has(year);
+  if (isOpen) {
+    _expandedYears.delete(year);
+    rows.forEach(r => r.style.display = 'none');
+    if (arrow) arrow.textContent = '▶';
+  } else {
+    _expandedYears.add(year);
+    rows.forEach(r => r.style.display = '');
+    if (arrow) arrow.textContent = '▼';
+  }
+}
+
+function renderPerfTable(periodData) {
+  const isM = currentView === 'monthly';
+  const head = document.getElementById('perfTableHead');
+  const body = document.getElementById('perfTableBody');
+  head.innerHTML = `<tr>
+    <th class="l">${isM ? 'Period' : 'Week'}</th>
+    <th>Charge Amount</th><th>Adj. Collections</th>
+    <th>Coll. Rate</th><th>Procedures</th>
+    <th>Encounters</th><th>${isM ? 'Working Days' : 'Days'}</th>
+  </tr>`;
+  if (!periodData.length) {
+    body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:28px;">No data for selected filters</td></tr>';
+    return;
+  }
+
+  if (!isM) {
+    // Weekly: flat list, newest-first, cap 60
+    const rows = [...periodData].reverse().slice(0, 60);
+    set('perfTableMeta', `Showing ${rows.length} of ${periodData.length} weeks`);
+    body.innerHTML = rows.map(r => `<tr>
+      <td class="l bold">${r.label}</td>
+      <td>${fmtM(r.chargeAmount)}</td>
+      <td>${fmtM(r.adjCollections)}</td>
+      <td>${fmtPct(r.collRate)}</td>
+      <td>${fmtK(r.procedures)}</td>
+      <td>${fmtK(r.encounters)}</td>
+      <td>${r.days}</td>
+    </tr>`).join('');
+    return;
+  }
+
+  /* Monthly — group by year, year rows are collapsible */
+  const byYear = {};
+  periodData.forEach(m => {
+    const y = String(m.year);
+    if (!byYear[y]) byYear[y] = [];
+    byYear[y].push(m);
+  });
+
+  const years = Object.keys(byYear).sort().reverse();  // newest year first
+
+  set('perfTableMeta', `${years.length} years · ${periodData.length} months · click a year row to expand`);
+
+  let html = '';
+  years.forEach(year => {
+    const months = byYear[year].sort((a,b) => b.monthNum - a.monthNum);  // newest month first
+    // Year totals
+    const tot = months.reduce((s, m) => ({
+      chargeAmount:   s.chargeAmount   + m.chargeAmount,
+      adjCollections: s.adjCollections + m.adjCollections,
+      procedures:     s.procedures     + m.procedures,
+      encounters:     s.encounters     + m.encounters,
+      days:           s.days           + m.days,
+    }), { chargeAmount:0, adjCollections:0, procedures:0, encounters:0, days:0 });
+    const totRate = tot.chargeAmount > 0 ? tot.adjCollections / tot.chargeAmount : null;
+    const isOpen  = _expandedYears.has(year);
+
+    html += `<tr class="year-group-row" onclick="toggleYear('${year}')" style="cursor:pointer;background:var(--surface2);border-top:2px solid var(--border2);">
+      <td class="l" style="padding:10px 14px;font-weight:700;font-size:13px;">
+        <span id="yarrow-${year}" style="font-size:9px;margin-right:6px;display:inline-block;width:10px">${isOpen ? '▼' : '▶'}</span>
+        ${year}
+        <span style="font-size:11px;font-weight:500;color:var(--text3);margin-left:6px">${months.length} month${months.length!==1?'s':''}</span>
+      </td>
+      <td style="font-weight:600">${fmtM(tot.chargeAmount)}</td>
+      <td style="font-weight:600">${fmtM(tot.adjCollections)}</td>
+      <td style="font-weight:600">${fmtPct(totRate)}</td>
+      <td style="font-weight:600">${fmtK(tot.procedures)}</td>
+      <td style="font-weight:600">${fmtK(tot.encounters)}</td>
+      <td style="font-weight:600">${tot.days}</td>
+    </tr>`;
+
+    months.forEach(m => {
+      html += `<tr class="mrow-${year}" style="display:${isOpen ? '' : 'none'};background:var(--surface);">
+        <td class="l" style="padding-left:32px;color:var(--text2)">${m.label}</td>
+        <td>${fmtM(m.chargeAmount)}</td>
+        <td>${fmtM(m.adjCollections)}</td>
+        <td>${fmtPct(m.collRate)}</td>
+        <td>${fmtK(m.procedures)}</td>
+        <td>${fmtK(m.encounters)}</td>
+        <td>${m.days}</td>
+      </tr>`;
+    });
+  });
+
+  body.innerHTML = html;
+}
+
+function renderAlerts() {
+  const alerts = [];
+  if (loadErrors.length) {
+    alerts.push({ t:'warn', m:`Could not load: ${loadErrors.map(e=>e.deal).join(', ')} (tabs may be empty or not yet created).` });
+  }
+  if (filteredData.some(r => r.deal === 'Atlanta Endo')) {
+    alerts.push({ t:'warn', m:`Atlanta Endo data is at monthly granularity — weekly view excludes these records. "Revenue" column used as Adjusted Collections (provisional).` });
+  }
+  const monthly = aggregateMonthly(filteredData);
+  const ttm = calcTTM(monthly);
+  if (ttm?.isPartial) {
+    alerts.push({ t:'warn', m:`TTM uses only ${ttm.months} months — insufficient history for a full 12-month window in the selected filter.` });
+  }
+  document.getElementById('alertArea').innerHTML = alerts.map(a =>
+    `<div class="alert ${a.t}"><span class="alert-icon">${a.t==='warn'?'⚠':'✕'}</span><span>${a.m}</span></div>`
+  ).join('');
+}
+
+/* ════════════════════════════════════════════════════════════
+   LOCATION BREAKDOWN
+   ════════════════════════════════════════════════════════════ */
+function renderPeriodSpotlight() {
+  const thead = document.getElementById('periodSpotlightHead');
+  const tbody = document.getElementById('periodSpotlightBody');
+  const meta  = document.getElementById('periodSpotlightMeta');
+  const lbl   = document.getElementById('periodSpotlightLabel');
+  const sub   = document.getElementById('periodSpotlightSub');
+  if (!thead || !tbody) return;
+
+  const isMonthly = currentView === 'monthly';
+  if (lbl) lbl.textContent = isMonthly
+    ? 'Revenue Period Analysis · Month T / T-1 / T-2'
+    : 'Revenue Period Analysis · Week T / T-1 / T-2';
+  if (sub) sub.textContent = `3 most recent ${isMonthly ? 'months' : 'weeks'} · current year vs same period prior year · per location`;
+
+  // Collect all period keys present in filtered data
+  const periodSet = new Set();
+  filteredData.forEach(r => {
+    if (isMonthly && r.year && r.monthNum)
+      periodSet.add(`${r.year}-${String(r.monthNum).padStart(2,'0')}`);
+    else if (!isMonthly && r.year && r.week)
+      periodSet.add(`${r.year}-${String(r.week).padStart(2,'0')}`);
+  });
+  const periods = [...periodSet].sort().slice(-3);   // [T-2, T-1, T]
+  if (!periods.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:16px;">Not enough period data</td></tr>';
+    return;
+  }
+
+  const priorPeriods = periods.map(p => {
+    const [y, m] = p.split('-');
+    return `${+y - 1}-${m}`;
+  });
+
+  // Aggregate current periods from filteredData
+  const locData = {};
+  filteredData.forEach(r => {
+    const pk = isMonthly
+      ? (r.year && r.monthNum ? `${r.year}-${String(r.monthNum).padStart(2,'0')}` : null)
+      : (r.year && r.week     ? `${r.year}-${String(r.week).padStart(2,'0')}`     : null);
+    if (!pk || !periods.includes(pk)) return;
+    const loc = r.location || '(unspecified)';
+    if (!locData[loc]) locData[loc] = { deal: r.deal };
+    locData[loc][pk] = (locData[loc][pk] || 0) + r.adjCollections;
+  });
+
+  // Aggregate prior-year periods from allData (respecting deal/loc filters but NOT date filter)
+  const f = getFilters();
+  allData.forEach(r => {
+    if (f.deal && r.deal !== f.deal) return;
+    if (f.locs.size > 0 && !f.locs.has(r.location)) return;
+    const pk = isMonthly
+      ? (r.year && r.monthNum ? `${r.year}-${String(r.monthNum).padStart(2,'0')}` : null)
+      : (r.year && r.week     ? `${r.year}-${String(r.week).padStart(2,'0')}`     : null);
+    if (!pk || !priorPeriods.includes(pk)) return;
+    const loc = r.location || '(unspecified)';
+    if (!locData[loc]) locData[loc] = { deal: r.deal };
+    locData[loc][pk] = (locData[loc][pk] || 0) + r.adjCollections;
+  });
+
+  const tLabels = ['T-2', 'T-1', 'T'];
+  function periodLabel(key) {
+    const [y, m] = key.split('-');
+    return isMonthly
+      ? `${MO_SHORT[+m - 1]} '${String(+y).slice(2)}`
+      : `Wk ${+m} '${String(+y).slice(2)}`;
+  }
+
+  // Build header: two rows
+  const headerCols = periods.map((p, i) => {
+    const curLbl  = periodLabel(p);
+    const priLbl  = periodLabel(priorPeriods[i]);
+    return `<th colspan="3" style="text-align:center;background:var(--surface3);border-left:2px solid var(--border2)">
+      ${priLbl} → ${curLbl} <span style="opacity:0.55;font-weight:400">(${tLabels[i]})</span>
+    </th>`;
+  }).join('');
+  const subCols = periods.map(() =>
+    `<th style="border-left:2px solid var(--border2)">Current</th><th>YoY $</th><th>YoY %</th>`
+  ).join('');
+  thead.innerHTML = `<tr><th class="l" rowspan="2">Location</th><th class="l" rowspan="2" style="color:var(--text3)">Deal</th>${headerCols}</tr><tr>${subCols}</tr>`;
+
+  // Sort locations by most recent period revenue desc
+  const lastPeriod = periods[periods.length - 1];
+  const locs = Object.keys(locData)
+    .filter(loc => periods.some(p => (locData[loc][p] || 0) > 0))
+    .sort((a, b) => (locData[b][lastPeriod] || 0) - (locData[a][lastPeriod] || 0));
+
+  if (meta) meta.textContent = `${locs.length} locations`;
+
+  if (!locs.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:16px;">No data for these periods</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = locs.map(loc => {
+    const d = locData[loc];
+    const periodCells = periods.map((p, i) => {
+      const cur  = d[p]              ?? null;
+      const pri  = d[priorPeriods[i]] ?? null;
+      const varD = cur != null && pri != null ? cur - pri : null;
+      const varP = varD != null && pri > 0 ? varD / pri : null;
+      const col  = varD == null ? '' : varD >= 0 ? 'var(--green)' : 'var(--red)';
+      return `<td style="border-left:2px solid var(--border2);font-weight:600">${cur != null ? fmtM(cur, true) : '<span style="color:var(--text3)">—</span>'}</td>
+              <td style="color:${col};font-weight:600">${varD != null ? (varD >= 0 ? '↑ +' : '↓ ') + fmtM(varD, true) : '—'}</td>
+              <td>${varP != null ? `<span class="yoy-badge ${varP >= 0 ? 'pos' : 'neg'}">${varP >= 0 ? '+' : ''}${(varP * 100).toFixed(1)}%</span>` : '—'}</td>`;
+    }).join('');
+    return `<tr>
+      <td class="l" style="font-weight:600">${loc}</td>
+      <td class="l" style="font-size:11px;color:var(--text2)">${d.deal || ''}</td>
+      ${periodCells}
+    </tr>`;
+  }).join('');
+}
+
+function aggregateByLocation(data) {
+  const map = {};
+  data.forEach(r => {
+    const key = `${r.deal}__${r.location || '(unspecified)'}`;
+    if (!map[key]) map[key] = {
+      deal: r.deal, location: r.location || '(unspecified)',
+      chargeAmount: 0, adjCollections: 0, procedures: 0, encounters: 0,
+    };
+    map[key].chargeAmount   += r.chargeAmount;
+    map[key].adjCollections += r.adjCollections;
+    map[key].procedures     += r.procedures;
+    map[key].encounters     += r.encounters;
+  });
+  return Object.values(map).map(m => ({
+    ...m,
+    collRate:  m.chargeAmount > 0  ? m.adjCollections / m.chargeAmount : null,
+    avgTicket: m.encounters   > 0  ? m.adjCollections / m.encounters   : null,
+  })).sort((a, b) => b.adjCollections - a.adjCollections);
+}
+
+function calcPriorPeriodByLocation(data, isMonthly) {
+  // For each location, compute adj collections for the most recent period
+  // and the period immediately before it, then return a map: location → priorAdj
+  const locPeriods = {};
+  data.forEach(r => {
+    if (!r.year) return;
+    const loc = r.location || '(unspecified)';
+    const key = isMonthly
+      ? `${r.year}-${String(r.monthNum).padStart(2,'0')}`
+      : `${r.year}-${String(r.week||0).padStart(2,'0')}`;
+    if (!key) return;
+    if (!locPeriods[loc]) locPeriods[loc] = {};
+    if (!locPeriods[loc][key]) locPeriods[loc][key] = 0;
+    locPeriods[loc][key] += r.adjCollections;
+  });
+  const result = {};
+  Object.entries(locPeriods).forEach(([loc, periods]) => {
+    const sorted = Object.keys(periods).sort();
+    if (sorted.length < 2) { result[loc] = null; return; }
+    const latest = sorted[sorted.length - 1];
+    const prior  = sorted[sorted.length - 2];
+    result[loc] = { current: periods[latest], prior: periods[prior], priorKey: prior };
+  });
+  return result;
+}
+
+function renderLocationBreakdown() {
+  const body = document.getElementById('locTableBody');
+  const meta = document.getElementById('locTableMeta');
+  if (!body) return;
+
+  const locs = aggregateByLocation(filteredData);
+  const isMonthly = currentView === 'monthly';
+  const priorMap = calcPriorPeriodByLocation(filteredData, isMonthly);
+
+  if (meta) meta.textContent = `${locs.length} locations`;
+
+  if (!locs.length) {
+    body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px;">No location data</td></tr>';
+    return;
+  }
+
+  body.innerHTML = locs.map(loc => {
+    const pp = priorMap[loc.location];
+    const varD = pp ? loc.adjCollections - pp.prior : null;
+    const varP = pp && pp.prior > 0 ? varD / pp.prior : null;
+    const varCol = varD == null ? '' : varD >= 0 ? 'var(--green)' : 'var(--red)';
+    const varHtml = varD != null
+      ? `<span style="color:${varCol};font-weight:600">${varD>=0?'↑ +':'↓ '}${fmtM(varD,true)}</span>`
+      : '<span style="color:var(--text3)">—</span>';
+    const pctHtml = varP != null
+      ? `<span class="yoy-badge ${varP>=0?'pos':'neg'}">${varP>=0?'↑ +':'↓ '}${(varP*100).toFixed(1)}%</span>`
+      : '<span style="color:var(--text3)">—</span>';
+
+    return `<tr>
+      <td class="l" style="font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${loc.location}</td>
+      <td class="l" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:11px;color:var(--text2)">${loc.deal}</td>
+      <td style="font-weight:600">${fmtM(loc.adjCollections, true)}</td>
+      <td>${fmtM(loc.chargeAmount, true)}</td>
+      <td>${loc.collRate != null ? fmtPct(loc.collRate) : '—'}</td>
+      <td>${loc.encounters ? numFmt(loc.encounters) : '—'}</td>
+      <td style="font-weight:600">${loc.avgTicket ? '$' + numFmt(Math.round(loc.avgTicket)) : '—'}</td>
+      <td>${varHtml}</td>
+      <td>${pctHtml}</td>
+    </tr>`;
+  }).join('');
+
+  /* Populate the location detail selector with all locations in current filter */
+  const sel = document.getElementById('locDetailSelect');
+  if (sel) {
+    const allLocs = locs.map(l => ({ key: `${l.deal}__${l.location}`, label: `${l.location} (${l.deal})` }));
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— pick a location —</option>' +
+      allLocs.map(o => `<option value="${o.key}"${o.key===prev?' selected':''}>${o.label}</option>`).join('');
+    if (prev && allLocs.some(o => o.key === prev)) renderLocDetail();
+  }
+}
+
+/* ── Location Revenue Detail: monthly × fiscal year cross-tab ─────────── */
+const MO_FULL_LIST = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function renderLocDetail() {
+  const sel = document.getElementById('locDetailSelect');
+  const container = document.getElementById('locDetailBody');
+  const title = document.getElementById('locDetailTitle');
+  if (!sel || !container) return;
+
+  const val = sel.value;
+  if (!val) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:28px;font-size:12px">Choose a location from the dropdown above</div>';
+    if (title) title.textContent = 'Select a location';
+    return;
+  }
+
+  const [deal, location] = val.split('__');
+  if (title) title.textContent = `${location} · ${deal}`;
+
+  /* Build data: rows per (year, monthNum) */
+  const rows = allData.filter(r =>
+    r.deal === deal &&
+    (r.location || '(unspecified)') === location &&
+    r.year && r.monthNum
+  );
+
+  if (!rows.length) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:28px;font-size:12px">No data for this location</div>';
+    return;
+  }
+
+  /* Aggregate into map[year][monthNum] */
+  const byYM = {};
+  rows.forEach(r => {
+    const y = r.year, m = r.monthNum;
+    if (!byYM[y]) byYM[y] = {};
+    if (!byYM[y][m]) byYM[y][m] = { adj: 0, enc: 0, charges: 0 };
+    byYM[y][m].adj     += r.adjCollections;
+    byYM[y][m].enc     += r.encounters;
+    byYM[y][m].charges += r.chargeAmount;
+  });
+
+  const years = Object.keys(byYM).map(Number).sort();
+
+  /* Year totals */
+  const yearTotals = {};
+  years.forEach(y => {
+    yearTotals[y] = { adj: 0, enc: 0, charges: 0 };
+    Object.values(byYM[y]).forEach(v => {
+      yearTotals[y].adj     += v.adj;
+      yearTotals[y].enc     += v.enc;
+      yearTotals[y].charges += v.charges;
+    });
+  });
+
+  const colW = '110px';
+  const thStyle = `style="text-align:right;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text3);white-space:nowrap;min-width:${colW}"`;
+  const tdNum   = (v) => v > 0 ? `$${numFmt(Math.round(v))}` : '–';
+  const tdTick  = (adj, enc) => (enc > 0 ? `$${numFmt(Math.round(adj/enc))}` : '–');
+
+  /* Build two sub-tables side by side or stacked:
+     Table 1: Revenue, Net Adj. Collections
+     Table 2: Avg Ticket Price (adj / encounters) */
+
+  const buildTable = (label, cellFn, totalFn) => {
+    let h = `<table style="border-collapse:collapse;width:100%;font-size:12px;min-width:${120 + years.length*120}px">`;
+    h += `<thead><tr>
+      <th colspan="${years.length+1}" style="text-align:center;padding:8px 12px;font-size:12px;font-weight:700;background:var(--surface2);border-bottom:2px solid var(--border2)">${label}</th>
+    </tr><tr>
+      <th style="text-align:left;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text3);min-width:110px">Month</th>
+      ${years.map(y => `<th ${thStyle.replace('style="','style="background:var(--surface2);').slice(0,-1)}">FY${String(y).slice(2)} (${y})</th>`).join('')}
+    </tr></thead><tbody>`;
+
+    for (let mo = 1; mo <= 12; mo++) {
+      const hasAny = years.some(y => byYM[y]?.[mo]);
+      const rowStyle = hasAny ? '' : ' style="color:var(--text4)"';
+      h += `<tr${rowStyle}>
+        <td style="padding:4px 12px;font-size:12px;color:var(--text2)">${MO_FULL_LIST[mo-1]}</td>
+        ${years.map(y => {
+          const v = byYM[y]?.[mo];
+          const val = v ? cellFn(v) : '–';
+          return `<td style="text-align:right;padding:4px 12px;font-variant-numeric:tabular-nums">${val}</td>`;
+        }).join('')}
+      </tr>`;
+    }
+
+    /* Totals row */
+    h += `<tr style="background:var(--surface2);border-top:2px solid var(--border2);font-weight:700">
+      <td style="padding:7px 12px;font-size:12px">Totals</td>
+      ${years.map(y => `<td style="text-align:right;padding:7px 12px;font-variant-numeric:tabular-nums">${totalFn(yearTotals[y])}</td>`).join('')}
+    </tr>`;
+
+    h += '</tbody></table>';
+    return h;
+  };
+
+  const revenueTable = buildTable(
+    'Revenue, Net Adj. Collections ($)',
+    v => `$${numFmt(Math.round(v.adj))}`,
+    t => `$${numFmt(Math.round(t.adj))}`
+  );
+
+  const ticketTable = buildTable(
+    'Avg Ticket Price (Adj. Collections ÷ Encounters)',
+    v => tdTick(v.adj, v.enc),
+    t => tdTick(t.adj, t.enc)
+  );
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:24px;padding-bottom:8px">
+      <div style="overflow-x:auto">${revenueTable}</div>
+      <div style="overflow-x:auto">${ticketTable}</div>
+    </div>`;
+}
+
+function renderDealSummary() {
+  const body = document.getElementById('dealSummaryBody');
+  if (!body) return;
+  const activeDealNames = [...new Set(filteredData.map(r => r.deal))].sort();
+  if (!activeDealNames.length) {
+    body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">No data loaded</td></tr>';
+    return;
+  }
+  body.innerHTML = activeDealNames.map(dealName => {
+    const dealRows   = filteredData.filter(r => r.deal === dealName);
+    const dealMonthly = aggregateMonthly(dealRows);
+    const ttm        = calcTTM(dealMonthly);
+    const loi        = loiConfig[dealName] || null;
+    const varD       = ttm && loi ? ttm.amount - loi : null;
+    const varP       = varD != null && loi > 0 ? varD / loi : null;
+    const dates      = dealRows.filter(r=>r.date).map(r=>r.date.getTime());
+    const latest     = dates.length ? new Date(Math.max(...dates)) : null;
+    const varCol     = varD == null ? '' : varD >= 0 ? 'var(--green)' : 'var(--red)';
+    const pctHtml    = varP != null
+      ? `<span class="yoy-badge ${varP>=0?'pos':'neg'}">${varP>=0?'↑ +':'↓ '}${(varP*100).toFixed(1)}%</span>`
+      : '<span style="color:var(--text3);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:11px">Set in LOI Config</span>';
+    return `<tr>
+      <td class="l deal-name">${dealName}</td>
+      <td class="l period-lbl">${ttm ? ttm.periodLabel : '—'}</td>
+      <td style="font-weight:600">${ttm ? fmtM(ttm.amount, true) : '—'}</td>
+      <td>${loi ? fmtM(loi, true) : '<span style="color:var(--text3);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:11px">—</span>'}</td>
+      <td style="color:${varCol};font-weight:700">${varD != null ? (varD>=0?'↑ +':'↓ ')+fmtM(varD,true) : '—'}</td>
+      <td>${pctHtml}</td>
+      <td class="l period-lbl">${latest ? latest.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════
+   MASTER RENDER
+   ════════════════════════════════════════════════════════════ */
+function renderDashboard() {
+  const monthly    = aggregateMonthly(filteredData);
+  const weekly     = aggregateWeekly(filteredData);
+  const periodData = currentView === 'monthly' ? monthly : weekly;
+  renderAlerts();
+  renderKPIs(monthly);
+  renderDealSummary();
+  renderTTMvsLOI(monthly);
+  renderMainChart(periodData);
+  renderCollRate(periodData);
+  renderYoY(monthly);
+  renderPerfTable(periodData);
+  renderPeriodSpotlight();
+  renderLocationBreakdown();
+}
+
+/* ════════════════════════════════════════════════════════════
+   TOAST
+   ════════════════════════════════════════════════════════════ */
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+/* ════════════════════════════════════════════════════════════
+   INITIALIZATION
+   ════════════════════════════════════════════════════════════ */
+async function init() {
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  document.getElementById('statusDot').className = 'dot';
+  document.getElementById('lastUpdated').textContent = 'Loading…';
+  loadLOI();
+
+  try {
+    document.getElementById('loadingDetail').textContent = 'Fetching Summary tab for LOI values…';
+    await fetchSummaryLOI();
+
+    let overlayDismissed = false;
+    function dismissOverlay() {
+      if (overlayDismissed) return;
+      overlayDismissed = true;
+      document.getElementById('loadingOverlay').style.display = 'none';
+      buildDealDropdown();
+      rebuildLocationDropdown();
+      buildLoiGrid();
+      applyFilters();
+    }
+
+    await loadAllData((settled, total) => {
+      // Show the UI as soon as the first tab has loaded data
+      if (!overlayDismissed && allData.length > 0) {
+        dismissOverlay();
+      }
+      // Keep updating the status bar and re-rendering as more tabs arrive
+      if (overlayDismissed) {
+        const now = new Date();
+        document.getElementById('lastUpdated').textContent =
+          settled < total
+            ? `Loading… ${settled} / ${total} tabs`
+            : `Loaded ${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${loadedDeals.length} of ${total} tabs`;
+        document.getElementById('statusDot').className = settled < total ? 'dot amber' : (loadErrors.length ? 'dot amber' : 'dot green');
+        applyFilters();
+      }
+    });
+
+    // Final state after all tabs settle
+    if (!allData.length) {
+      document.getElementById('loadingDetail').textContent =
+        'No data returned. Ensure the Google Sheet is set to "Anyone with the link can view."';
+      document.getElementById('statusDot').className = 'dot red';
+      return;
+    }
+    if (!overlayDismissed) dismissOverlay();
+
+    // Final full render with all data
+    const now = new Date();
+    document.getElementById('lastUpdated').textContent =
+      `Loaded ${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${loadedDeals.length} of ${DEALS.length} tabs`;
+    document.getElementById('statusDot').className = loadErrors.length ? 'dot amber' : 'dot green';
+    applyFilters();
+
+  } catch (err) {
+    console.error('[Dashboard]', err);
+    document.getElementById('loadingDetail').textContent = `Error: ${err.message}`;
+    document.getElementById('statusDot').className = 'dot red';
+  }
+}
+
+async function refreshData() { await init(); }
+
+init();
 </script>
 </body>
 </html>
