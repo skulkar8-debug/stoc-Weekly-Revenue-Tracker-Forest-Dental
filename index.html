@@ -1,13 +1,10 @@
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SP USA | Dental Practice Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- System fonts only — no Google Fonts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -557,7 +554,7 @@ table.dt td.neg   { color: var(--red);   font-weight: 600; }
   </div>
   <div class="spinner"></div>
   <div class="loading-text">Connecting to Database…</div>
-  <div class="loading-detail" id="loadingDetail">Fetching Import tabs in parallel</div>
+  <div class="loading-detail" id="loadingDetail">Initializing…</div>
 </div>
 
 <!-- ── HEADER ─────────────────────────────────────────────── -->
@@ -1117,29 +1114,21 @@ function normalizeRow(raw, deal) {
   } catch { return null; }
 }
 
-async function loadAllData(onTabLoaded) {
+async function loadAllData() {
   allData = []; loadErrors = []; loadedDeals = [];
   let settled = 0;
   const total = DEALS.length;
-  const promises = DEALS.map((d, i) =>
-    fetchTab(d)
-      .then(rows => {
-        if (rows.length > 0) {
-          allData.push(...rows);
-          loadedDeals.push(d.name);
-        }
-      })
-      .catch(err => {
-        loadErrors.push({ deal: d.name, error: err.message });
-      })
-      .finally(() => {
-        settled++;
-        const det = document.getElementById('loadingDetail');
-        if (det) det.textContent = `Loading database… ${settled} / ${total} tabs`;
-        if (onTabLoaded) onTabLoaded(settled, total);
-      })
+  const det = document.getElementById('loadingDetail');
+  await Promise.allSettled(
+    DEALS.map(d =>
+      fetchTab(d)
+        .then(rows => {
+          if (rows.length > 0) { allData.push(...rows); loadedDeals.push(d.name); }
+        })
+        .catch(err => { loadErrors.push({ deal: d.name, error: err.message }); })
+        .finally(() => { settled++; if (det) det.textContent = `Loading… ${settled} / ${total} tabs`; })
+    )
   );
-  await Promise.allSettled(promises);
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -1277,10 +1266,6 @@ function onFilterChange() {
   document.getElementById('recordCount').textContent =
     `${filteredData.length.toLocaleString()} records`;
   renderDashboard();
-}
-
-function applyFilters() {
-  onFilterChange();
 }
 
 function setView(v) {
@@ -1593,12 +1578,10 @@ function fmtK(n)   { return n ? numFmt(Math.round(n)) : '—'; }
 function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
 
 /* Chart.js global defaults for light theme */
-if (window.Chart) {
-  Chart.defaults.color = '#6B7280';
-  Chart.defaults.borderColor = '#E5E7EB';
-  Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-  Chart.defaults.font.size = 11;
-}
+Chart.defaults.color = '#6B7280';
+Chart.defaults.borderColor = '#E5E7EB';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+Chart.defaults.font.size = 11;
 
 const TOOLTIP = {
   backgroundColor: '#1B3564',
@@ -1623,7 +1606,7 @@ const SCALE_X = {
    ════════════════════════════════════════════════════════════ */
 function renderTTMTrend(canvasId, rolling, loiTotal) {
   destroyChart(canvasId);
-  if (!window.Chart || !rolling.length) return;
+  if (!rolling.length) return;
   const datasets = [{
     label: 'Rolling TTM Adj. Collections',
     data: rolling.map(r => r.amount),
@@ -1647,7 +1630,6 @@ function renderTTMTrend(canvasId, rolling, loiTotal) {
 
 function renderMainChart(data) {
   destroyChart('main');
-  if (!window.Chart) return;
   const d = data.slice(-30);
   if (!d.length) return;
   charts.main = new Chart(document.getElementById('mainChart'), {
@@ -1669,7 +1651,6 @@ function renderMainChart(data) {
 
 function renderCollRate(data) {
   destroyChart('collRate');
-  if (!window.Chart) return;
   const d = data.filter(x => x.collRate != null).slice(-24);
   if (!d.length) return;
   charts.collRate = new Chart(document.getElementById('collRateChart'), {
@@ -1691,7 +1672,6 @@ function renderCollRate(data) {
 
 function renderYoYChart(yoy) {
   destroyChart('yoy');
-  if (!window.Chart) return;
   const d = yoy.filter(r => r.prior != null);
   if (!d.length) return;
   charts.yoy = new Chart(document.getElementById('yoyChart'), {
@@ -2331,12 +2311,12 @@ function renderDealSummary() {
     const varCol     = varD == null ? '' : varD >= 0 ? 'var(--green)' : 'var(--red)';
     const pctHtml    = varP != null
       ? `<span class="yoy-badge ${varP>=0?'pos':'neg'}">${varP>=0?'↑ +':'↓ '}${(varP*100).toFixed(1)}%</span>`
-      : "<span style=\"color:var(--text3);font-size:11px\">Set in LOI Config</span>";
+      : '<span style="color:var(--text3);font-size:11px">Set in LOI Config</span>';
     return `<tr>
       <td class="l deal-name">${dealName}</td>
       <td class="l period-lbl">${ttm ? ttm.periodLabel : '—'}</td>
       <td style="font-weight:600">${ttm ? fmtM(ttm.amount, true) : '—'}</td>
-      <td>${loi ? fmtM(loi, true) : "<span style=\"color:var(--text3);font-size:11px\">—</span>"}</td>
+      <td>${loi ? fmtM(loi, true) : '<span style="color:var(--text3);font-size:11px">—</span>'}</td>
       <td style="color:${varCol};font-weight:700">${varD != null ? (varD>=0?'↑ +':'↓ ')+fmtM(varD,true) : '—'}</td>
       <td>${pctHtml}</td>
       <td class="l period-lbl">${latest ? latest.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}</td>
@@ -2383,70 +2363,35 @@ async function init() {
   document.getElementById('lastUpdated').textContent = 'Loading…';
   loadLOI();
 
+  // Fetch LOI from Summary tab in background — does NOT block the main load
+  fetchSummaryLOI().catch(() => {});
+
   try {
-    document.getElementById('loadingDetail').textContent = 'Fetching Summary tab for LOI values…';
-    await fetchSummaryLOI();
+    await loadAllData();
 
-    let overlayDismissed = false;
-    function dismissOverlay() {
-      if (overlayDismissed) return;
-      overlayDismissed = true;
-      document.getElementById('loadingOverlay').style.display = 'none';
-      buildDealDropdown();
-      rebuildLocationDropdown();
-      buildLoiGrid();
-      applyFilters();
-    }
-
-    await loadAllData((settled, total) => {
-      // Show the UI as soon as the first tab has loaded data
-      if (!overlayDismissed && allData.length > 0) {
-        dismissOverlay();
-      }
-      // Keep updating the status bar and re-rendering as more tabs arrive
-      if (overlayDismissed) {
-        const now = new Date();
-        document.getElementById('lastUpdated').textContent =
-          settled < total
-            ? `Loading… ${settled} / ${total} tabs`
-            : `Loaded ${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${loadedDeals.length} of ${total} tabs`;
-        document.getElementById('statusDot').className = settled < total ? 'dot amber' : (loadErrors.length ? 'dot amber' : 'dot green');
-        applyFilters();
-      }
-    });
-
-    // Final state after all tabs settle
     if (!allData.length) {
-      const msg = 'No data returned. Ensure the Google Sheet is set to "Anyone with the link can view" and the Import tabs exist.';
-      document.getElementById('loadingOverlay').style.display = 'none';
-      document.getElementById('loadingDetail').textContent = msg;
-      document.getElementById('lastUpdated').textContent = 'No data loaded';
+      document.getElementById('loadingDetail').textContent =
+        'No data returned. Check that the Google Sheet is set to "Anyone with the link can view."';
       document.getElementById('statusDot').className = 'dot red';
-      const alertArea = document.getElementById('alertArea');
-      if (alertArea) {
-        alertArea.innerHTML = `<div class="alert err"><span class="alert-icon">⚠</span><div>${msg}</div></div>`;
-      }
       return;
     }
-    if (!overlayDismissed) dismissOverlay();
 
-    // Final full render with all data
+    document.getElementById('loadingOverlay').style.display = 'none';
+
     const now = new Date();
     document.getElementById('lastUpdated').textContent =
       `Loaded ${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${loadedDeals.length} of ${DEALS.length} tabs`;
     document.getElementById('statusDot').className = loadErrors.length ? 'dot amber' : 'dot green';
-    applyFilters();
+
+    buildDealDropdown();
+    rebuildLocationDropdown();
+    buildLoiGrid();
+    onFilterChange();
 
   } catch (err) {
-    console.error('[Dashboard]', err);
-    document.getElementById('loadingOverlay').style.display = 'none';
+    console.error('[Dashboard] init error:', err);
     document.getElementById('loadingDetail').textContent = `Error: ${err.message}`;
-    document.getElementById('lastUpdated').textContent = 'Load error';
     document.getElementById('statusDot').className = 'dot red';
-    const alertArea = document.getElementById('alertArea');
-    if (alertArea) {
-      alertArea.innerHTML = `<div class="alert err"><span class="alert-icon">⚠</span><div>Dashboard load error: ${err.message}</div></div>`;
-    }
   }
 }
 
