@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1278,6 +1279,10 @@ function onFilterChange() {
   renderDashboard();
 }
 
+function applyFilters() {
+  onFilterChange();
+}
+
 function setView(v) {
   currentView = v;
   document.getElementById('btnMonthly').classList.toggle('active', v === 'monthly');
@@ -1588,10 +1593,12 @@ function fmtK(n)   { return n ? numFmt(Math.round(n)) : '—'; }
 function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
 
 /* Chart.js global defaults for light theme */
-Chart.defaults.color = '#6B7280';
-Chart.defaults.borderColor = '#E5E7EB';
-Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-Chart.defaults.font.size = 11;
+if (window.Chart) {
+  Chart.defaults.color = '#6B7280';
+  Chart.defaults.borderColor = '#E5E7EB';
+  Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  Chart.defaults.font.size = 11;
+}
 
 const TOOLTIP = {
   backgroundColor: '#1B3564',
@@ -1616,7 +1623,7 @@ const SCALE_X = {
    ════════════════════════════════════════════════════════════ */
 function renderTTMTrend(canvasId, rolling, loiTotal) {
   destroyChart(canvasId);
-  if (!rolling.length) return;
+  if (!window.Chart || !rolling.length) return;
   const datasets = [{
     label: 'Rolling TTM Adj. Collections',
     data: rolling.map(r => r.amount),
@@ -1640,6 +1647,7 @@ function renderTTMTrend(canvasId, rolling, loiTotal) {
 
 function renderMainChart(data) {
   destroyChart('main');
+  if (!window.Chart) return;
   const d = data.slice(-30);
   if (!d.length) return;
   charts.main = new Chart(document.getElementById('mainChart'), {
@@ -1661,6 +1669,7 @@ function renderMainChart(data) {
 
 function renderCollRate(data) {
   destroyChart('collRate');
+  if (!window.Chart) return;
   const d = data.filter(x => x.collRate != null).slice(-24);
   if (!d.length) return;
   charts.collRate = new Chart(document.getElementById('collRateChart'), {
@@ -1682,6 +1691,7 @@ function renderCollRate(data) {
 
 function renderYoYChart(yoy) {
   destroyChart('yoy');
+  if (!window.Chart) return;
   const d = yoy.filter(r => r.prior != null);
   if (!d.length) return;
   charts.yoy = new Chart(document.getElementById('yoyChart'), {
@@ -2321,12 +2331,12 @@ function renderDealSummary() {
     const varCol     = varD == null ? '' : varD >= 0 ? 'var(--green)' : 'var(--red)';
     const pctHtml    = varP != null
       ? `<span class="yoy-badge ${varP>=0?'pos':'neg'}">${varP>=0?'↑ +':'↓ '}${(varP*100).toFixed(1)}%</span>`
-      : '<span style="color:var(--text3);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:11px">Set in LOI Config</span>';
+      : "<span style=\"color:var(--text3);font-size:11px\">Set in LOI Config</span>";
     return `<tr>
       <td class="l deal-name">${dealName}</td>
       <td class="l period-lbl">${ttm ? ttm.periodLabel : '—'}</td>
       <td style="font-weight:600">${ttm ? fmtM(ttm.amount, true) : '—'}</td>
-      <td>${loi ? fmtM(loi, true) : '<span style="color:var(--text3);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:11px">—</span>'}</td>
+      <td>${loi ? fmtM(loi, true) : "<span style=\"color:var(--text3);font-size:11px\">—</span>"}</td>
       <td style="color:${varCol};font-weight:700">${varD != null ? (varD>=0?'↑ +':'↓ ')+fmtM(varD,true) : '—'}</td>
       <td>${pctHtml}</td>
       <td class="l period-lbl">${latest ? latest.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}</td>
@@ -2407,9 +2417,15 @@ async function init() {
 
     // Final state after all tabs settle
     if (!allData.length) {
-      document.getElementById('loadingDetail').textContent =
-        'No data returned. Ensure the Google Sheet is set to "Anyone with the link can view."';
+      const msg = 'No data returned. Ensure the Google Sheet is set to "Anyone with the link can view" and the Import tabs exist.';
+      document.getElementById('loadingOverlay').style.display = 'none';
+      document.getElementById('loadingDetail').textContent = msg;
+      document.getElementById('lastUpdated').textContent = 'No data loaded';
       document.getElementById('statusDot').className = 'dot red';
+      const alertArea = document.getElementById('alertArea');
+      if (alertArea) {
+        alertArea.innerHTML = `<div class="alert err"><span class="alert-icon">⚠</span><div>${msg}</div></div>`;
+      }
       return;
     }
     if (!overlayDismissed) dismissOverlay();
@@ -2423,8 +2439,14 @@ async function init() {
 
   } catch (err) {
     console.error('[Dashboard]', err);
+    document.getElementById('loadingOverlay').style.display = 'none';
     document.getElementById('loadingDetail').textContent = `Error: ${err.message}`;
+    document.getElementById('lastUpdated').textContent = 'Load error';
     document.getElementById('statusDot').className = 'dot red';
+    const alertArea = document.getElementById('alertArea');
+    if (alertArea) {
+      alertArea.innerHTML = `<div class="alert err"><span class="alert-icon">⚠</span><div>Dashboard load error: ${err.message}</div></div>`;
+    }
   }
 }
 
